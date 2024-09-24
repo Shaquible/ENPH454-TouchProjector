@@ -4,7 +4,6 @@ import time
 import mediapipe as mp
 mp_hands = mp.solutions.hands
 
-
 class HandTracker:
     def __init__(self, src=0, name="WebcamVideoStream", height=1080, width=1920, fps=30, focus=0):
         # initialize the camera and properties
