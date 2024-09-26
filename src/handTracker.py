@@ -5,7 +5,7 @@ import mediapipe as mp
 mp_hands = mp.solutions.hands
 
 class HandTracker:
-    def __init__(self, src=0, name="WebcamVideoStream", height=1080, width=1920, fps=30, focus=0):
+    def __init__(self, src=0, name="WebcamVideoStream", height=1080, width=1920, fps=30, focus=0, exposure = -10):
         # initialize the camera and properties
         self.stream = cv2.VideoCapture(src, cv2.CAP_DSHOW)
         self.fps = fps
@@ -18,6 +18,8 @@ class HandTracker:
         # self.stream.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         # lower focus focuses further away from the camera
         # focus min: 0, max: 255, increment:5
+        self.stream.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
+        self.stream.set(cv2.CAP_PROP_EXPOSURE, exposure)
         self.stream.set(cv2.CAP_PROP_AUTOFOCUS, 0)
         self.stream.set(cv2.CAP_PROP_FOCUS, focus)
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
@@ -31,6 +33,7 @@ class HandTracker:
         self.hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2,
                                     min_detection_confidence=0.5, min_tracking_confidence=0.5, model_complexity=1)
         self.processedFrame = self.frame
+        self.hand_landmarks = None
 
     def start(self):
         # start the thread to read frames from the video stream
@@ -66,6 +69,7 @@ class HandTracker:
                 # draw the hand landmarks on the frame
                 mp.solutions.drawing_utils.draw_landmarks(
                     frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+            self.hand_landmarks = results.multi_hand_landmarks
         self.processedFrame = frame
 
     def handThread(self):
@@ -73,10 +77,7 @@ class HandTracker:
         while True:
             if self.stopped:
                 return
-            startTime = time.time()
             self.detectHands()
-            timeLeft = delta - (time.time() - startTime)
-            print(1/(delta-timeLeft), end="\r")
 
     def read(self):
         # return the frame most recently read
