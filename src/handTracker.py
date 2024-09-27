@@ -6,15 +6,20 @@ mp_hands = mp.solutions.hands
 
 
 class HandTracker:
-    def __init__(self, stream):
+    def __init__(self, stream: cv2.VideoCapture):
         # initialize the camera and properties
         self.stream = stream
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
+        # clear the camera buffer on boot
+        for i in range(10):
+            stream.grab()
         (self.grabbed, self.frame) = self.stream.read()
+        self.fps = self.stream.get(cv2.CAP_PROP_FPS)
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
         # initialize the variable used to indicate if the thread should
         # be stopped
-        self.stopped = False
+        self.stopCap = False
+        self.stopTrack = False
         self.hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2,
                                     min_detection_confidence=0.5, min_tracking_confidence=0.5, model_complexity=1)
         self.processedFrame = self.frame
@@ -23,7 +28,7 @@ class HandTracker:
 
     def startCapture(self):
         # start the thread to read frames from the video stream
-        t = Thread(target=self.update, name=self.name, args=())
+        t = Thread(target=self.update, name="capture", args=())
         t.daemon = True
         t.start()
         return
@@ -45,7 +50,7 @@ class HandTracker:
             prevTime = time.time()
             # otherwise, read the next frame from the stream
             (self.grabbed, self.frame) = self.stream.read()
-            sleepTime = frameDelta - (time.time() - prevTime)
+            sleepTime = frameDelta - (time.time() - prevTime) - 0.01
             time.sleep(sleepTime*(sleepTime > 0))
 
     def detectHands(self):
@@ -59,7 +64,7 @@ class HandTracker:
                     # draw the hand landmarks on the frame
                     mp.solutions.drawing_utils.draw_landmarks(
                         frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-                    self.processedFrame = frame
+                self.processedFrame = frame
             self.hand_landmarks = results.multi_hand_landmarks
 
     def handThread(self):
@@ -89,7 +94,7 @@ class HandTracker:
 
 if __name__ == "__main__":
     import webcamStream
-    stream = webcamStream.openStream()
+    stream = webcamStream.openStream(exposure=-5)
     webcam = HandTracker(stream)
     webcam.startCapture()
     webcam.startHandTracking()
@@ -97,7 +102,7 @@ if __name__ == "__main__":
         while True:
             if webcam.frame is not None:
                 cv2.imshow("Hand Tracking", webcam.processedFrame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                if cv2.waitKey(3) & 0xFF == ord('q'):
                     webcam.shutdown()
                     cv2.destroyAllWindows()
                     break
