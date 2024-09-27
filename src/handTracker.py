@@ -4,29 +4,14 @@ import time
 import mediapipe as mp
 mp_hands = mp.solutions.hands
 
-class HandTracker:
-    def __init__(self, src=0, name="WebcamVideoStream", height=1080, width=1920, fps=30, focus=0, exposure = -10):
-        # initialize the camera and properties
-        self.stream = cv2.VideoCapture(src, cv2.CAP_DSHOW)
-        self.fps = fps
-        self.stream.open(src, cv2.CAP_DSHOW)
 
-        self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        self.stream.set(cv2.CAP_PROP_FOURCC,
-                        cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
-        # self.stream.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        # lower focus focuses further away from the camera
-        # focus min: 0, max: 255, increment:5
-        self.stream.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-        self.stream.set(cv2.CAP_PROP_EXPOSURE, exposure)
-        self.stream.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-        self.stream.set(cv2.CAP_PROP_FOCUS, focus)
+class HandTracker:
+    def __init__(self, stream):
+        # initialize the camera and properties
+        self.stream = stream
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
         (self.grabbed, self.frame) = self.stream.read()
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
-        # initialize the thread name
-        self.name = name
         # initialize the variable used to indicate if the thread should
         # be stopped
         self.stopped = False
@@ -34,23 +19,27 @@ class HandTracker:
                                     min_detection_confidence=0.5, min_tracking_confidence=0.5, model_complexity=1)
         self.processedFrame = self.frame
         self.hand_landmarks = None
+        self.drawDebug = True
 
-    def start(self):
+    def startCapture(self):
         # start the thread to read frames from the video stream
         t = Thread(target=self.update, name=self.name, args=())
         t.daemon = True
         t.start()
-        t2 = Thread(target=self.handThread, name="HandTracker", args=())
-        t2.daemon = True
-        t2.start()
-        return self
+        return
+
+    def startHandTracking(self):
+        t = Thread(target=self.handThread, name="HandTracker", args=())
+        t.daemon = True
+        t.start()
+        return
 
     def update(self):
         frameDelta = 1/self.fps
         # keep looping infinitely until the thread is stopped
         while True:
             # if the thread indicator variable is set, stop the thread
-            if self.stopped:
+            if self.stopCap:
                 return
 
             prevTime = time.time()
@@ -64,18 +53,19 @@ class HandTracker:
         results = self.hands.process(
             cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
+            if self.drawDebug:
+                for hand_landmarks in results.multi_hand_landmarks:
 
-                # draw the hand landmarks on the frame
-                mp.solutions.drawing_utils.draw_landmarks(
-                    frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                    # draw the hand landmarks on the frame
+                    mp.solutions.drawing_utils.draw_landmarks(
+                        frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                    self.processedFrame = frame
             self.hand_landmarks = results.multi_hand_landmarks
-        self.processedFrame = frame
 
     def handThread(self):
         delta = 1/self.fps
         while True:
-            if self.stopped:
+            if self.stopTrack:
                 return
             self.detectHands()
 
@@ -83,24 +73,34 @@ class HandTracker:
         # return the frame most recently read
         return self.frame
 
-    def stop(self):
+    def stopCapture(self):
         # indicate that the thread should be stopped
-        self.stopped = True
+        self.stopCap = True
         self.stream.release()
+
+    def stopTracking(self):
+        self.stopTrack = True
+
+    def shutdown(self):
+        self.stopCapture()
+        self.stopTracking()
         self.hands.close()
 
 
 if __name__ == "__main__":
-    webcam = HandTracker(height=720, width=1280)
-    webcam.start()
+    import webcamStream
+    stream = webcamStream.openStream()
+    webcam = HandTracker(stream)
+    webcam.startCapture()
+    webcam.startHandTracking()
     try:
         while True:
             if webcam.frame is not None:
                 cv2.imshow("Hand Tracking", webcam.processedFrame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
-                    webcam.stop()
+                    webcam.shutdown()
                     cv2.destroyAllWindows()
                     break
     except KeyboardInterrupt:
-        webcam.stop()
+        webcam.shutdown()
         cv2.destroyAllWindows()
