@@ -10,9 +10,6 @@ class HandTracker:
         # initialize the camera and properties
         self.stream = stream
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
-        # clear the camera buffer on boot
-        for i in range(10):
-            stream.grab()
         (self.grabbed, self.frame) = self.stream.read()
         self.fps = self.stream.get(cv2.CAP_PROP_FPS)
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
@@ -42,6 +39,9 @@ class HandTracker:
     def update(self):
         frameDelta = 1/self.fps
         # keep looping infinitely until the thread is stopped
+        # clear the camera buffer on boot
+        for i in range(10):
+            stream.grab()
         while True:
             # if the thread indicator variable is set, stop the thread
             if self.stopCap:
