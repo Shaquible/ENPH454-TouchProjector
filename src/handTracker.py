@@ -2,6 +2,7 @@ from threading import Thread
 import cv2
 import time
 import mediapipe as mp
+import numpy as np
 mp_hands = mp.solutions.hands
 
 
@@ -41,7 +42,7 @@ class HandTracker:
         # keep looping infinitely until the thread is stopped
         # clear the camera buffer on boot
         for i in range(10):
-            stream.grab()
+            self.stream.grab()
         while True:
             # if the thread indicator variable is set, stop the thread
             if self.stopCap:
@@ -94,7 +95,7 @@ class HandTracker:
 
 if __name__ == "__main__":
     import webcamStream
-    stream = webcamStream.openStream(exposure=-5)
+    stream = webcamStream.openStream(exposure=-7)
     webcam = HandTracker(stream)
     webcam.startCapture()
     webcam.startHandTracking()

@@ -3,7 +3,7 @@ import cv2
 
 def openStream(src: int = 0, height: int = 1080, width: int = 1920, fps: int = 30, focus: int = 0, exposure: int = -7) -> cv2.VideoCapture:
     stream = cv2.VideoCapture(src, cv2.CAP_DSHOW)
-    # stream.open(src, cv2.CAP_DSHOW)
+    stream.open(src, cv2.CAP_DSHOW)
     stream.set(cv2.CAP_PROP_FPS, fps)
     stream.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     stream.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
