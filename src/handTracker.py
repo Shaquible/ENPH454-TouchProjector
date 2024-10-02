@@ -3,6 +3,7 @@ import cv2
 import time
 import mediapipe as mp
 import numpy as np
+from multiprocessing import Queue
 mp_hands = mp.solutions.hands
 
 
@@ -31,8 +32,9 @@ class HandTracker:
         t.start()
         return
 
-    def startHandTracking(self):
-        t = Thread(target=self.handThread, name="HandTracker", args=())
+    def startHandTracking(self, dataQueue: Queue):
+        t = Thread(target=self.handThread,
+                   name="HandTracker", args=(dataQueue,))
         t.daemon = True
         t.start()
         return
@@ -68,16 +70,28 @@ class HandTracker:
                 self.processedFrame = frame
             self.hand_landmarks = results.multi_hand_landmarks
 
-    def handThread(self):
+    def handThread(self, dataQueue: Queue):
         delta = 1/self.fps
         while True:
             if self.stopTrack:
                 return
             self.detectHands()
+            if self.hand_landmarks is not None:
+                if not dataQueue.empty():
+                    dataQueue.get()
+                dataQueue.put(self.hand_landmarks)
 
     def read(self):
         # return the frame most recently read
         return self.frame
+
+    def watchKill(self, killQueue: Queue):
+        while True:
+            if killQueue.empty():
+                time.sleep(2)
+            else:
+                self.shutdown()
+                return
 
     def stopCapture(self):
         # indicate that the thread should be stopped
