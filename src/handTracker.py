@@ -95,7 +95,7 @@ class HandTracker:
 
 if __name__ == "__main__":
     import webcamStream
-    stream = webcamStream.openStream(exposure=-7)
+    stream = webcamStream.openStream(exposure=-3)
     webcam = HandTracker(stream)
     webcam.startCapture()
     webcam.startHandTracking()
