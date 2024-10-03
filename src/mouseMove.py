@@ -16,8 +16,8 @@ class mouseMove:
         y = (position[1])/self.ylen*self.yRes
         x = x + self.xRes/2
         y = y + self.yRes/2
-        print(x,y)
+        #print(x,y)
         pyautogui.moveTo(x,y)
-        if position[2] < self.threshold:
-            pyautogui.click()
-        return
+        # if position[2] < self.threshold:
+        #     pyautogui.click()
+        # return

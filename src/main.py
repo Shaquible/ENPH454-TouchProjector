@@ -4,17 +4,23 @@ from triangulation import Triangulation, Camera
 import mediapipe as mp
 import numpy as np
 from multiprocessing import Process, Queue
-
-
-def ML_Process(Tracker: HandTracker, dataQueue: Queue, killQueue: Queue):
+import time
+from mouseMove import mouseMove
+imHeight = 1080
+imWidth = 1920
+exposure = -8
+def ML_Process(captureNum: int, dataQueue: Queue, killQueue: Queue):
+    cap = openStream(captureNum, 1080, 1920, exposure=-8)
+    Tracker = HandTracker(cap)
+    Tracker.drawDebug = False
     Tracker.startCapture()
+    time.sleep(0.2)
     Tracker.startHandTracking(dataQueue)
     Tracker.watchKill(killQueue)
 
 
 def main():
-    imHeight = 1080
-    imWidth = 1920
+   
     mp_hands = mp.solutions.hands
     markerWidth = 0.1586
     npfile = np.load("cameraIntrinsics/cam128-2.npz")
@@ -23,31 +29,33 @@ def main():
     npfile = np.load("cameraIntrinsics/cam127-2.npz")
     mtx2 = npfile["mtx"]
     dist2 = npfile["dist"]
-    cap1 = openStream(0, imHeight, imWidth, exposure=-8)
-    cap2 = openStream(1, imHeight, imWidth, exposure=-8)
+    cap1 = openStream(0, imHeight, imWidth, exposure=exposure)
+    cap2 = openStream(1, imHeight, imWidth, exposure=exposure)
 
     tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
     tri.getCameraPositionsStream(cap1, cap2, markerWidth)
     print("Position Found")
-    tracker1 = HandTracker(cap1)
-    tracker1.drawDebug = False
-    tracker2 = HandTracker(cap2)
-    tracker2.drawDebug = False
+    cap1.release()
+    cap2.release()
+    time.sleep(0.2)
     # launching the process to run tracking on each camera
     procs = []
     q1 = Queue(1)
     q2 = Queue(1)
     kill1 = Queue(1)
     kill2 = Queue(1)
-    procs.append(Process(target=ML_Process, args=(tracker1, q1, kill1)))
-    procs.append(Process(target=ML_Process, args=(tracker2, q2, kill2)))
+    procs.append(Process(target=ML_Process, args=(0, q1, kill1)))
+    procs.append(Process(target=ML_Process, args=(1, q2, kill2)))
     for proc in procs:
         proc.start()
-
+    mouse = mouseMove()
     try:
         while True:
-            cam1Hands = q1.get()
-            cam2Hands = q2.get()
+            try:
+                cam1Hands = q1.get(timeout=0.01)
+                cam2Hands = q2.get(timeout=0.01)
+            except:
+                continue
             if cam1Hands is not None and cam2Hands is not None:
                 for hand in cam1Hands:
                     cam1Coords = np.array([hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x*imWidth,
@@ -56,7 +64,11 @@ def main():
                     cam2Coords = np.array([hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x*imWidth,
                                            hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y*imHeight])
                 pos = tri.get3dPoint(cam1Coords, cam2Coords)[:, 0]
-                print(pos, end="\r")
+                position = "X: {:.2f} Y: {:.2f} Z: {:.2f}".format(pos[0]*100, pos[1]*100, pos[2]*100)
+                print(position, end="\r")
+                mouse.moveMouse(pos)
+
+                #print(pos, end="\r")
     except KeyboardInterrupt:
         kill1.put(1)
         kill2.put(1)

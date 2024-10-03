@@ -8,12 +8,12 @@ mp_hands = mp.solutions.hands
 
 
 class HandTracker:
-    def __init__(self, stream: cv2.VideoCapture):
+    def __init__(self, stream: cv2.VideoCapture, fps: int = 30):
         # initialize the camera and properties
         self.stream = stream
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
         (self.grabbed, self.frame) = self.stream.read()
-        self.fps = self.stream.get(cv2.CAP_PROP_FPS)
+        self.fps = fps
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
         # initialize the variable used to indicate if the thread should
         # be stopped
@@ -57,6 +57,8 @@ class HandTracker:
             time.sleep(sleepTime*(sleepTime > 0))
 
     def detectHands(self):
+        if self.frame is None:
+            return
         frame = self.frame.copy()
         results = self.hands.process(
             cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -71,14 +73,16 @@ class HandTracker:
             self.hand_landmarks = results.multi_hand_landmarks
 
     def handThread(self, dataQueue: Queue):
-        delta = 1/self.fps
         while True:
             if self.stopTrack:
                 return
             self.detectHands()
             if self.hand_landmarks is not None:
                 if not dataQueue.empty():
-                    dataQueue.get()
+                    try:
+                        dataQueue.get(timeout=0.01)
+                    except:
+                        pass
                 dataQueue.put(self.hand_landmarks)
 
     def read(self):
