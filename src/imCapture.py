@@ -15,10 +15,12 @@ cap.set(cv2.CAP_PROP_FOURCC,
 # focus min: 0, max: 255, increment:5
 cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 cap.set(cv2.CAP_PROP_FOCUS, 0)
+cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
+cap.set(cv2.CAP_PROP_EXPOSURE, -8)
+
 i = 0
 while True:
     ret, frame = cap.read()
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.imshow("frame", frame)
     if cv2.waitKey(1) & 0xFF == ord(' '):
         cv2.imwrite("frame{}.jpg".format(10+i), frame)
