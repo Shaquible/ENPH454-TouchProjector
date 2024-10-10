@@ -25,27 +25,29 @@ class HandTracker:
         self.hand_landmarks = None
         self.drawDebug = True
 
-    def startCapture(self):
+    def startCapture(self, sendQueue: Queue, receiveQueue: Queue):
         # start the thread to read frames from the video stream
-        t = Thread(target=self.update, name="capture", args=())
+        t = Thread(target=self.update, name="capture", args=(sendQueue, receiveQueue))
         t.daemon = True
         t.start()
         return
 
-    def startHandTracking(self, dataQueue: Queue):
+    def startHandTracking(self, dataQueue: Queue, sendQueue: Queue, receiveQueue: Queue):
         t = Thread(target=self.handThread,
-                   name="HandTracker", args=(dataQueue,))
+                   name="HandTracker", args=(dataQueue,sendQueue, receiveQueue))
         t.daemon = True
         t.start()
         return
 
-    def update(self):
+    def update(self, sendQueue: Queue, receiveQueue: Queue):
         frameDelta = 1/self.fps
         # keep looping infinitely until the thread is stopped
         # clear the camera buffer on boot
         for i in range(10):
             self.stream.grab()
         while True:
+            sendQueue.put(1)
+            receiveQueue.get()
             # if the thread indicator variable is set, stop the thread
             if self.stopCap:
                 return
@@ -72,10 +74,12 @@ class HandTracker:
                 self.processedFrame = frame
             self.hand_landmarks = results.multi_hand_landmarks
 
-    def handThread(self, dataQueue: Queue):
+    def handThread(self, dataQueue: Queue, sendQueue: Queue, receiveQueue: Queue):
         while True:
             if self.stopTrack:
                 return
+            sendQueue.put(1)
+            receiveQueue.get()
             self.detectHands()
             if self.hand_landmarks is not None:
                 if not dataQueue.empty():

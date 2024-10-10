@@ -6,16 +6,17 @@ import numpy as np
 from multiprocessing import Process, Queue
 import time
 from mouseMove import mouseMove
+from handPositionFilter import rollingAvg
 imHeight = 1080
 imWidth = 1920
 exposure = -8
-def ML_Process(captureNum: int, dataQueue: Queue, killQueue: Queue):
+def ML_Process(captureNum: int, dataQueue: Queue, killQueue: Queue, capSQ: Queue, capRQ: Queue, processSQ: Queue, processRQ: Queue):
     cap = openStream(captureNum, 1080, 1920, exposure=-8)
     Tracker = HandTracker(cap)
     Tracker.drawDebug = False
-    Tracker.startCapture()
+    Tracker.startCapture(capSQ, capRQ)
     time.sleep(0.2)
-    Tracker.startHandTracking(dataQueue)
+    Tracker.startHandTracking(dataQueue, processSQ, processRQ)
     Tracker.watchKill(killQueue)
 
 
@@ -38,14 +39,19 @@ def main():
     cap1.release()
     cap2.release()
     time.sleep(0.2)
+    handAverage = rollingAvg(2,3,3)
     # launching the process to run tracking on each camera
     procs = []
     q1 = Queue(1)
     q2 = Queue(1)
     kill1 = Queue(1)
     kill2 = Queue(1)
-    procs.append(Process(target=ML_Process, args=(0, q1, kill1)))
-    procs.append(Process(target=ML_Process, args=(1, q2, kill2)))
+    capQ1 = Queue(1)
+    capQ2 = Queue(1)
+    processQ1 = Queue(1)
+    processQ2 = Queue(1)
+    procs.append(Process(target=ML_Process, args=(0, q1, kill1, capQ1, capQ2, processQ1, processQ2)))
+    procs.append(Process(target=ML_Process, args=(1, q2, kill2, capQ2, capQ1, processQ2, processQ1)))
     for proc in procs:
         proc.start()
     mouse = mouseMove()
@@ -64,6 +70,7 @@ def main():
                     cam2Coords = np.array([hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x*imWidth,
                                            hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y*imHeight])
                 pos = tri.get3dPoint(cam1Coords, cam2Coords)[:, 0]
+                pos = handAverage.smoothPos(pos)
                 position = "X: {:.2f} Y: {:.2f} Z: {:.2f}".format(pos[0]*100, pos[1]*100, pos[2]*100)
                 print(position, end="\r")
                 mouse.moveMouse(pos)
