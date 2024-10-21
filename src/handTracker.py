@@ -24,6 +24,8 @@ class HandTracker:
         self.processedFrame = self.frame
         self.hand_landmarks = None
         self.drawDebug = True
+        self.H = None
+        self.S = None
 
     def startCapture(self, sendQueue: Queue, receiveQueue: Queue):
         # start the thread to read frames from the video stream
@@ -54,7 +56,15 @@ class HandTracker:
 
             prevTime = time.time()
             # otherwise, read the next frame from the stream
-            (self.grabbed, self.frame) = self.stream.read()
+            (self.grabbed, frame) = self.stream.read()
+                
+            h,s,v = cv2.split(cv2.cvtColor(frame, cv2.COLOR_BGR2HSV))
+            if self.H is None:
+                self.H = np.ones_like(h)*15
+                self.S = np.ones_like(s)*150
+                print("Here")
+            merge = cv2.merge([self.H, self.S, v])
+            self.frame = cv2.cvtColor(merge, cv2.COLOR_HSV2BGR)
             sleepTime = frameDelta - (time.time() - prevTime) - 0.01
             time.sleep(sleepTime*(sleepTime > 0))
 
@@ -92,14 +102,6 @@ class HandTracker:
     def read(self):
         # return the frame most recently read
         return self.frame
-
-    def watchKill(self, killQueue: Queue):
-        while True:
-            if killQueue.empty():
-                time.sleep(2)
-            else:
-                self.shutdown()
-                return
 
     def stopCapture(self):
         # indicate that the thread should be stopped
