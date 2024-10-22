@@ -11,7 +11,12 @@ imHeight = 1080
 imWidth = 1920
 exposure = -8
 def ML_Process(captureNum: int, dataQueue: Queue, killQueue: Queue, capSQ: Queue, capRQ: Queue, processSQ: Queue, processRQ: Queue):
-    cap = openStream(captureNum, 1080, 1920, exposure=-8)
+    opened = False
+    while not opened:
+        cap = openStream(captureNum, 1080, 1920, exposure=-8)
+        if cap.isOpened():
+            opened = True
+    
     Tracker = HandTracker(cap)
     Tracker.drawDebug = False
     Tracker.startCapture(capSQ, capRQ)

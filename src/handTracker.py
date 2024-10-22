@@ -8,11 +8,15 @@ mp_hands = mp.solutions.hands
 
 
 class HandTracker:
-    def __init__(self, stream: cv2.VideoCapture, fps: int = 30):
+    def __init__(self, stream: cv2.VideoCapture, fps: int = 30, height = 1080, width = 1920):
         # initialize the camera and properties
         self.stream = stream
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
         (self.grabbed, self.frame) = self.stream.read()
+        while not self.grabbed:
+            (self.grabbed, self.frame) = self.stream.read()
+        self.H = np.ones((height, width), dtype=np.uint8)*15
+        self.S = np.ones((height, width), dtype=np.uint8)*150
         self.fps = fps
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
         # initialize the variable used to indicate if the thread should
@@ -54,7 +58,10 @@ class HandTracker:
 
             prevTime = time.time()
             # otherwise, read the next frame from the stream
-            (self.grabbed, self.frame) = self.stream.read()
+            (self.grabbed, frame) = self.stream.read()
+            while not self.grabbed:
+                (self.grabbed, frame) = self.stream.read()
+            self.frame = frame
             sleepTime = frameDelta - (time.time() - prevTime) - 0.01
             time.sleep(sleepTime*(sleepTime > 0))
 
@@ -62,8 +69,14 @@ class HandTracker:
         if self.frame is None:
             return
         frame = self.frame.copy()
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        h,s,v = cv2.split(hsv)
+        merge = cv2.merge((self.H,self.S,v))
+        frame = cv2.cvtColor(merge, cv2.COLOR_HSV2BGR)
         results = self.hands.process(
             cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        
+
         if results.multi_hand_landmarks:
             if self.drawDebug:
                 for hand_landmarks in results.multi_hand_landmarks:
