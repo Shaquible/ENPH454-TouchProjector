@@ -106,13 +106,13 @@ class HandTracker:
         # return the frame most recently read
         return self.frame
 
-    def watchKill(self, killQueue: Queue):
-        while True:
-            if killQueue.empty():
-                time.sleep(2)
-            else:
-                self.shutdown()
-                return
+    def watchKill(self):
+        try:
+            while True:
+                time.sleep(1)
+        except:
+            self.shutdown()
+            return
 
     def stopCapture(self):
         # indicate that the thread should be stopped
