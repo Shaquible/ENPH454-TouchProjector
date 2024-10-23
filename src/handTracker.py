@@ -28,6 +28,8 @@ class HandTracker:
         self.processedFrame = self.frame
         self.hand_landmarks = None
         self.drawDebug = True
+        self.H = None
+        self.S = None
 
     def startCapture(self, sendQueue: Queue, receiveQueue: Queue):
         # start the thread to read frames from the video stream
