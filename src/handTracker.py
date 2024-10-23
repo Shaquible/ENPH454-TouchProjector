@@ -28,8 +28,6 @@ class HandTracker:
         self.processedFrame = self.frame
         self.hand_landmarks = None
         self.drawDebug = True
-        self.H = None
-        self.S = None
 
     def startCapture(self, sendQueue: Queue, receiveQueue: Queue):
         # start the thread to read frames from the video stream
@@ -107,6 +105,14 @@ class HandTracker:
     def read(self):
         # return the frame most recently read
         return self.frame
+
+    def watchKill(self, killQueue: Queue):
+        while True:
+            if killQueue.empty():
+                time.sleep(2)
+            else:
+                self.shutdown()
+                return
 
     def stopCapture(self):
         # indicate that the thread should be stopped
