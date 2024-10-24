@@ -8,9 +8,9 @@ cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 #set exposure to manual
-cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
+cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
 # lower exposure to minimum
-cap.set(cv2.CAP_PROP_EXPOSURE, -10)
+# cap.set(cv2.CAP_PROP_EXPOSURE, -10)
 # lower focus focuses further away from the camera
 focus = 0  # min: 0, max: 255, increment:5
 cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)

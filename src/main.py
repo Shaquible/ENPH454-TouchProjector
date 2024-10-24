@@ -29,10 +29,10 @@ def main():
    
     mp_hands = mp.solutions.hands
     markerWidth = 0.1586
-    npfile = np.load("cameraIntrinsics/cam128-2.npz")
+    npfile = np.load("cameraIntrinsics/IRCam1.npz")
     mtx1 = npfile["mtx"]
     dist1 = npfile["dist"]
-    npfile = np.load("cameraIntrinsics/cam127-2.npz")
+    npfile = np.load("cameraIntrinsics/IRCam2.npz")
     mtx2 = npfile["mtx"]
     dist2 = npfile["dist"]
     cap1 = openStream(0, imHeight, imWidth, exposure=exposure)
