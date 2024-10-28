@@ -61,10 +61,13 @@ class Triangulation:
             self.cam1, self.cam2 = self.cam2, self.cam1
         rvec1, tvec1, markerpos1 = cv2.aruco.estimatePoseSingleMarkers(
             corners1[0], markerWidth, self.cam1.mtx, self.cam1.dist)
+       
         R1 = cv2.Rodrigues(rvec1)[0]
         rvec2, tvec2, markerpos2 = cv2.aruco.estimatePoseSingleMarkers(
             corners2[0], markerWidth, self.cam2.mtx, self.cam2.dist)
-        R2 = cv2.Rodrigues(rvec2)[0] 
+        R2 = cv2.Rodrigues(rvec2)[0]
+        print(tvec1, tvec2)
+        print(rvec1, rvec2)
         # get the pose of the marker in each camera frame
         pose1 = np.eye(4)
         pose1[:3, :3] = R1
@@ -76,6 +79,7 @@ class Triangulation:
         self.cam2.setPose(pose2)
         # get the relative pose of the two cameras
         self.relativePose = np.matmul(pose1, np.linalg.inv(pose2))
+        
         return
 
     def get3dPoint(self, point1: np.ndarray, point2: np.ndarray) -> np.ndarray:

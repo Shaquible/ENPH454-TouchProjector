@@ -17,8 +17,8 @@ def ML_Process(captureNum: int, dataQueue: Queue, capSQ: Queue, capRQ: Queue, pr
         if cap.isOpened():
             opened = True
     
-    Tracker = HandTracker(cap)
-    Tracker.drawDebug = False
+    Tracker = HandTracker(cap, captureNum)
+    #Tracker.drawDebug = False
     Tracker.startCapture(capSQ, capRQ)
     time.sleep(0.2)
     Tracker.startHandTracking(dataQueue, processSQ, processRQ)
