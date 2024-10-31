@@ -25,7 +25,7 @@ class HandTracker:
         self.stopCap = False
         self.stopTrack = False
         self.hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1,
-                                    min_detection_confidence=0.3, min_tracking_confidence=0.3, model_complexity=1)
+                                    min_detection_confidence=0.5, min_tracking_confidence=0.3, model_complexity=1)
         self.processedFrame = self.frame
         self.hand_landmarks = None
         self.drawDebug = True
@@ -97,13 +97,12 @@ class HandTracker:
             sendQueue.put(1)
             receiveQueue.get()
             self.detectHands()
-            if self.hand_landmarks is not None:
-                if not dataQueue.empty():
-                    try:
-                        dataQueue.get(timeout=0.01)
-                    except:
-                        pass
-                dataQueue.put(self.hand_landmarks)
+            if not dataQueue.empty():
+                try:
+                    dataQueue.get(timeout=0.01)
+                except:
+                    pass
+            dataQueue.put(self.hand_landmarks)
             cv2.imshow(str(self.num), self.processedFrame)
             cv2.waitKey(1)
 

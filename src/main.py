@@ -57,7 +57,7 @@ def main():
     cap1.release()
     cap2.release()
     time.sleep(0.2)
-    positionFilter = lowPassVelocity(2, 4, 2)
+    positionFilter = lowPassVelocity(2, 5, 3)
     # launching the process to run tracking on each camera
     procs = []
     q1 = Queue(1)
@@ -71,18 +71,17 @@ def main():
     for proc in procs:
         proc.start()
     mouse = mouseMove()
-    times = np.zeros(90)
-    xs = np.zeros(90)
-    ys = np.zeros(90)
-    zs = np.zeros(90)
+    dataCollectLen = 500
+    times = np.zeros(dataCollectLen)
+    xs = np.zeros(dataCollectLen)
+    ys = np.zeros(dataCollectLen)
+    zs = np.zeros(dataCollectLen)
     i = 0
+    t0 = time.time()
     try:
         while True:
-            try:
-                cam1Hands = q1.get()
-                cam2Hands = q2.get()
-            except:
-                continue
+            cam1Hands = q1.get()
+            cam2Hands = q2.get()
             if cam1Hands is not None and cam2Hands is not None:
                 for hand in cam1Hands:
                     cam1Coords = np.array([(hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x)*crop1[2] + crop1[0],
@@ -91,26 +90,28 @@ def main():
                     cam2Coords = np.array([(hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x)*crop2[2] + crop2[0],
                                            (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop2[3]+ crop2[1]])
                 pos = tri.get3dPoint(cam1Coords, cam2Coords)[:, 0]
-                # if i < 90:
+                # if i < dataCollectLen:
                 #     times[i] = time.time()
                 #     xs[i] = pos[0]
                 #     ys[i] = pos[1]
                 #     zs[i] = pos[2]
                 #     i += 1
-                # if i == 90:
+                # if i == dataCollectLen:
                 #     df = pd.DataFrame({"Time": times, "X": xs, "Y": ys, "Z": zs})
-                #     df.to_csv("circle.csv")
+                #     df.to_csv("dataCapture.csv")
                 #     i += 1
                 #     print("END\n")
                 
-                    
+                dt = time.time() - t0
+                t0 = time.time()
 
-                pos = positionFilter.smoothPos(pos[:3])
-                position = "X: {:.2f} Y: {:.2f} Z: {:.2f}".format(pos[0]*100, pos[1]*100, pos[2]*100)
+                #pos = positionFilter.smoothPos(pos[:3])
+                position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f}".format(pos[0]*100, pos[1]*100, pos[2]*100, dt)
                 print(position, end="\r")
                 mouse.moveMouse(pos)
 
                 #print(pos, end="\r")
+                
     except KeyboardInterrupt:
         print("\nShutting down")
         for proc in procs:
