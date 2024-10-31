@@ -6,21 +6,23 @@ import numpy as np
 from multiprocessing import Process, Queue
 import time
 from mouseMove import mouseMove
-from handPositionFilter import lowPassVelocity
+from handPositionFilter import deEmphasis
 import cv2
 import pandas as pd
 imHeight = 1080
 imWidth = 1920
 exposure = -8
+
+
 def ML_Process(captureNum: int, cropRegion, dataQueue: Queue, capSQ: Queue, capRQ: Queue, processSQ: Queue, processRQ: Queue):
     opened = False
     while not opened:
         cap = openStream(captureNum, 1080, 1920, exposure=-8)
         if cap.isOpened():
             opened = True
-    
+
     Tracker = HandTracker(cap, captureNum, cropRegion)
-    #Tracker.drawDebug = False
+    # Tracker.drawDebug = False
     Tracker.startCapture(capSQ, capRQ)
     time.sleep(0.2)
     Tracker.startHandTracking(dataQueue, processSQ, processRQ)
@@ -28,7 +30,7 @@ def ML_Process(captureNum: int, cropRegion, dataQueue: Queue, capSQ: Queue, capR
 
 
 def main():
-   
+
     mp_hands = mp.solutions.hands
     markerWidth = 0.1586
     npfile = np.load("cameraIntrinsics/IRCam1.npz")
@@ -45,9 +47,9 @@ def main():
         ret2, frame2 = cap2.read()
         if ret1 and ret2:
             break
-    crop1 = cv2.selectROI("cam0",frame1)
+    crop1 = cv2.selectROI("cam0", frame1)
     cv2.destroyAllWindows()
-    crop2 = cv2.selectROI("cam1",frame2)
+    crop2 = cv2.selectROI("cam1", frame2)
     cv2.destroyAllWindows()
     print(crop1, crop2)
 
@@ -57,7 +59,7 @@ def main():
     cap1.release()
     cap2.release()
     time.sleep(0.2)
-    positionFilter = lowPassVelocity(2, 5, 3)
+    positionFilter = deEmphasis()
     # launching the process to run tracking on each camera
     procs = []
     q1 = Queue(1)
@@ -66,8 +68,10 @@ def main():
     capQ2 = Queue(1)
     processQ1 = Queue(1)
     processQ2 = Queue(1)
-    procs.append(Process(target=ML_Process, args=(0, crop1, q1, capQ1, capQ2, processQ1, processQ2)))
-    procs.append(Process(target=ML_Process, args=(1, crop2, q2, capQ2, capQ1, processQ2, processQ1)))
+    procs.append(Process(target=ML_Process, args=(
+        0, crop1, q1, capQ1, capQ2, processQ1, processQ2)))
+    procs.append(Process(target=ML_Process, args=(
+        1, crop2, q2, capQ2, capQ1, processQ2, processQ1)))
     for proc in procs:
         proc.start()
     mouse = mouseMove()
@@ -85,10 +89,10 @@ def main():
             if cam1Hands is not None and cam2Hands is not None:
                 for hand in cam1Hands:
                     cam1Coords = np.array([(hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x)*crop1[2] + crop1[0],
-                                           (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop1[3]  + crop1[1]])
+                                           (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop1[3] + crop1[1]])
                 for hand in cam2Hands:
                     cam2Coords = np.array([(hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x)*crop2[2] + crop2[0],
-                                           (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop2[3]+ crop2[1]])
+                                           (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop2[3] + crop2[1]])
                 pos = tri.get3dPoint(cam1Coords, cam2Coords)[:, 0]
                 # if i < dataCollectLen:
                 #     times[i] = time.time()
@@ -101,17 +105,18 @@ def main():
                 #     df.to_csv("dataCapture.csv")
                 #     i += 1
                 #     print("END\n")
-                
+
                 dt = time.time() - t0
                 t0 = time.time()
 
-                #pos = positionFilter.smoothPos(pos[:3])
-                position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f}".format(pos[0]*100, pos[1]*100, pos[2]*100, dt)
+                pos = positionFilter.smoothPos(pos[:3])
+                position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f}".format(
+                    pos[0]*100, pos[1]*100, pos[2]*100, dt)
                 print(position, end="\r")
                 mouse.moveMouse(pos)
 
-                #print(pos, end="\r")
-                
+                # print(pos, end="\r")
+
     except KeyboardInterrupt:
         print("\nShutting down")
         for proc in procs:
