@@ -8,16 +8,17 @@ mp_hands = mp.solutions.hands
 
 
 class HandTracker:
-    def __init__(self, stream: cv2.VideoCapture, capNum: int, fps: int = 30, height = 1080, width = 1920):
+    def __init__(self, stream: cv2.VideoCapture, capNum: int, cropRegion, fps: int = 30, height = 1080, width = 1920):
         # initialize the camera and properties
         self.stream = stream
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
         (self.grabbed, self.frame) = self.stream.read()
         while not self.grabbed:
-            (self.grabbed, self.frame) = self.stream.read()
-        self.H = np.ones((height, width), dtype=np.uint8)*15
-        self.S = np.ones((height, width), dtype=np.uint8)*150
+            (self.grabbed, self.frame) = self.stream.read()           
+        self.H = np.ones((cropRegion[3], cropRegion[2]), dtype=np.uint8)*15
+        self.S = np.ones((cropRegion[3], cropRegion[2]), dtype=np.uint8)*150
         self.fps = fps
+        self.cropRegion = cropRegion
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
         # initialize the variable used to indicate if the thread should
         # be stopped
@@ -69,6 +70,8 @@ class HandTracker:
         if self.frame is None:
             return
         frame = self.frame.copy()
+        #crop the image
+        frame = frame[int(self.cropRegion[1]):int(self.cropRegion[1]+self.cropRegion[3]), int(self.cropRegion[0]):int(self.cropRegion[0]+self.cropRegion[2])]
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         h,s,v = cv2.split(hsv)
         merge = cv2.merge((self.H,self.S,v))
