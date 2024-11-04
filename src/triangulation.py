@@ -134,46 +134,20 @@ class Triangulation:
                 # get the rvec and tvec of the TL corner and the width and length of the projected image
 
                 # return the rvec and tvec of the TL corner and the width and length of the projected image
-
-
-
-    def createPlane(P1,P2, P3):
-        v1 = P2 - P1
-        v2 = P3 - P1
-
-        # Calculate the normal vector using the cross product
-        v3 = np.cross(v1, v2)
-
-
-
-        # Normalize the normal vector (optional)
-        v1Norm = v1 / np.linalg.norm(v1)
-        v2Norm = v2 / np.linalg.norm(v2)
-        v3Norm = v3 / np.linalg.norm(v3)
-
-        return(v1Norm,v2Norm,v3Norm)
-
-    def transform(center, v1,v2,v3):
-
-        transform = [[v1[0],v1[1], v1[2], -center[0] ], [v2[0],v2[1], v2[2], -center[1] ],[v3[0],v3[1], v3[2], -center[2] ],[0,0, 0, 1 ]]
-        return transform
     
-    # def averagePlaneVectors(vectorArray):
-
-    #     vectorArrayUse = abs(vectorArray)
-
-    #     print(vectorArrayUse)
-
-    #     xVectors = []
-    #     yVectors = []
-
-
-    #     zVectors = vectorArray[:][2]
-
-    #     print(zVectors)
-
-
-
-        
-        
-
+    def getProjectorTransform(self, camCorners: np.ndarray, imCorners: np.ndarray, imWidth, imHeight) -> np.ndarray:
+        camCorners = camCorners[0]
+        temp = camCorners[2].copy()
+        camCorners[2] = camCorners[3]
+        camCorners[3] = temp
+        imCorners = imCorners[0]
+        temp = imCorners[2].copy()
+        imCorners[2] = imCorners[3]
+        imCorners[3] = temp
+        pts1 = np.float32(camCorners)
+        pts2 = np.float32(imCorners)
+        matrix = cv2.getPerspectiveTransform(pts2,pts1)
+        #return coordinates of the corners of the image in the camera frame
+        TL = np.matmul(matrix, np.array([0, 0, 1]))
+        BR = np.matmul(matrix, np.array([imWidth, imHeight, 1]))
+        return TL, BR
