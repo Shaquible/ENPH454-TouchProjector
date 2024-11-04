@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 from picoControl import PicoControl
-
+from PIL import ImageGrab
+import time
 
 class Camera:
     def __init__(self, mtx, dist) -> None:
@@ -93,25 +94,35 @@ class Triangulation:
             self.cam1.projection, self.cam2.projection, undistort1, undistort2)
         return position
 
-    def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture, markerWidth: int) -> bool:
-        pico = PicoControl(0)
-        pico.setIRCutFilter(1)
+    def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture) -> bool:
+        # pico = PicoControl(0)
+        # pico.setIRCutFilter(1)
         # figure out coordinates of this and add white boarder
-        cv2.imshow("Aruco", cv2.imread("src/aruco10.png"))
-        cv2.waitKey(0)
+        imS = cv2.resize(cv2.imread("src/aruco10.png"), (500, 500))
+        cv2.imshow("Aruco", imS)
+        
+        cv2.waitKey(1)
+        time.sleep(2)
+        screenShot = np.array(ImageGrab.grab())
+        screenShot = cv2.cvtColor(screenShot, cv2.COLOR_BGR2GRAY)
+        cv2.imwrite("screenShot.png", screenShot)
+        (screenShotCorners, idsScreenShot, rejectedImgPoints) = self.ArucoDetector.detectMarkers(screenShot)
+        screenShotCorners = screenShotCorners[0]
         # do a screen grab of the display
         # find the marker in the screen shot to get pixel coordinates
+        i = 0
         while True:
+            i += 1
             # read in images
             grabbed1, frame1 = cap1.read()
             grabbed2, frame2 = cap2.read()
+            gray1,r1,g1 = cv2.split(frame1)
+            gray2, r2, g2 = cv2.split(frame2)
             # detect markers
-            gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
             (corners1, ids1, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray1)
-            gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
             (corners2, ids2, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray2)
             if ids1 is not None and ids2 is not None:
-                pico.setIRCutFilter(0)
+                # pico.setIRCutFilter(0)
                 cv2.destroyAllWindows()
                 # figure out which cam is which and
                 mean1 = np.mean(corners1[0][0][:, 0])
@@ -120,27 +131,30 @@ class Triangulation:
                     self.cam1, self.cam2 = self.cam2, self.cam1
                 corners1 = corners1[0]
                 corners2 = corners2[0]
-                points = np.zeros((4, 3))
-                for i, corner1, corner2 in enumerate(zip(corners1, corners2)):
-                    points[i] = self.get3dPoint(corner1, corner2)[:3]
-                # markers  TL TR BR BL
-                # markerWidth = np.mean(
-                #     [np.linalg.norm(points[0] - points[1]), np.linalg.norm(points[0] - points[3]), np.linalg.norm(points[1] - points[2]), np.linalg.norm(points[2] - points[3])])
-                # rvec1, tvec1, markerpos1 = cv2.aruco.estimatePoseSingleMarkers(
-                #     corners1[0], markerWidth, self.cam1.mtx, self.cam1.dist)
+                cam1TL, cam1TR, cam1BL, cam1BR = self.getProjectorTransform(corners1, screenShotCorners, screenShot.shape[0], screenShot.shape[1])
+                cam2TL, cam2TR, cam2BL, cam2BR = self.getProjectorTransform(corners2, screenShotCorners, screenShot.shape[0], screenShot.shape[1])
+                cv2.imwrite("gray1.png", gray1)
+                cv2.imwrite("gray2.png", gray2)
+                print(cam1TL, cam1TR, cam1BL, cam1BR)
+                TL = self.get3dPoint(cam1TL, cam2TL)[:3].reshape(3)
+                TR = self.get3dPoint(cam1TR, cam2TR)[:3].reshape(3)
+                BL = self.get3dPoint(cam1BL, cam2BL)[:3].reshape(3)
+                BR = self.get3dPoint(cam1BR, cam2BR)[:3].reshape(3)
+                print(TL, TR, BL, BR)
+                v1,v2,v3 = createPlane(TL,TR,BL)
+                transform = transform(TL,v1,v2,v3)
+                rod = transform[:3,:3]
+                
+                print(transform, rod)
 
-                # find rotation and translation of the marker from the 3d points
-                # use the pixel coordinates of the marker and the length of the edges to extrapolate the TL and BR corners
-                # get the rvec and tvec of the TL corner and the width and length of the projected image
-
-                # return the rvec and tvec of the TL corner and the width and length of the projected image
+                
     
-    def getProjectorTransform(self, camCorners: np.ndarray, imCorners: np.ndarray, imWidth, imHeight) -> np.ndarray:
-        camCorners = camCorners[0]
+    def getProjectorTransform(self, camCorners: np.ndarray, imCorners: np.ndarray, imWidth, imHeight):
+        camCorners = camCorners.reshape(4,2)
+        imCorners = imCorners.reshape(4,2)
         temp = camCorners[2].copy()
         camCorners[2] = camCorners[3]
         camCorners[3] = temp
-        imCorners = imCorners[0]
         temp = imCorners[2].copy()
         imCorners[2] = imCorners[3]
         imCorners[3] = temp
@@ -148,6 +162,25 @@ class Triangulation:
         pts2 = np.float32(imCorners)
         matrix = cv2.getPerspectiveTransform(pts2,pts1)
         #return coordinates of the corners of the image in the camera frame
-        TL = np.matmul(matrix, np.array([0, 0, 1]))
-        BR = np.matmul(matrix, np.array([imWidth, imHeight, 1]))
-        return TL, BR
+        TL = np.matmul(matrix, np.array([0, 0, 1]))[:2]
+        TR = np.matmul(matrix, np.array([imWidth, 0, 1]))[:2]
+        BL = np.matmul(matrix, np.array([0, imHeight, 1]))[:2]
+        BR = np.matmul(matrix, np.array([imWidth, imHeight, 1]))[:2]
+        return TL, TR, BL, BR
+    
+def createPlane(P1,P2, P3):
+    v1 = P2 - P1
+    v2 = P3 - P1
+    # Calculate the normal vector using the cross product
+    v3 = np.cross(v1, v2)
+    # Normalize the normal vector (optional)
+    v1Norm = v1 / np.linalg.norm(v1)
+    v2Norm = v2 / np.linalg.norm(v2)
+    v3Norm = v3 / np.linalg.norm(v3)
+
+    return(v1Norm,v2Norm,v3Norm)
+
+def transform(center, v1,v2,v3):
+
+    transform = [[v1[0],v1[1], v1[2], -center[0] ], [v2[0],v2[1], v2[2], -center[1] ],[v3[0],v3[1], v3[2], -center[2] ],[0,0, 0, 1 ]]
+    return transform
