@@ -8,27 +8,28 @@ mp_hands = mp.solutions.hands
 
 
 class HandTracker:
-    def __init__(self, stream: cv2.VideoCapture, fps: int = 30, height = 1080, width = 1920):
+    def __init__(self, stream: cv2.VideoCapture, capNum: int, cropRegion, fps: int = 30, height = 1080, width = 1920):
         # initialize the camera and properties
         self.stream = stream
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
         (self.grabbed, self.frame) = self.stream.read()
         while not self.grabbed:
-            (self.grabbed, self.frame) = self.stream.read()
-        self.H = np.ones((height, width), dtype=np.uint8)*15
-        self.S = np.ones((height, width), dtype=np.uint8)*150
+            (self.grabbed, self.frame) = self.stream.read()           
+        self.H = np.ones((cropRegion[3], cropRegion[2]), dtype=np.uint8)*15
+        self.S = np.ones((cropRegion[3], cropRegion[2]), dtype=np.uint8)*150
         self.fps = fps
+        self.cropRegion = cropRegion
         # self.stream.set(cv2.CAP_PROP_FPS, fps)
         # initialize the variable used to indicate if the thread should
         # be stopped
         self.stopCap = False
         self.stopTrack = False
-        self.hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2,
-                                    min_detection_confidence=0.5, min_tracking_confidence=0.5, model_complexity=1)
+        self.hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1,
+                                    min_detection_confidence=0.5, min_tracking_confidence=0.3, model_complexity=1)
         self.processedFrame = self.frame
         self.hand_landmarks = None
         self.drawDebug = True
-
+        self.num = capNum
     def startCapture(self, sendQueue: Queue, receiveQueue: Queue):
         # start the thread to read frames from the video stream
         t = Thread(target=self.update, name="capture", args=(sendQueue, receiveQueue))
@@ -69,6 +70,8 @@ class HandTracker:
         if self.frame is None:
             return
         frame = self.frame.copy()
+        #crop the image
+        frame = frame[int(self.cropRegion[1]):int(self.cropRegion[1]+self.cropRegion[3]), int(self.cropRegion[0]):int(self.cropRegion[0]+self.cropRegion[2])]
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         h,s,v = cv2.split(hsv)
         merge = cv2.merge((self.H,self.S,v))
@@ -94,13 +97,14 @@ class HandTracker:
             sendQueue.put(1)
             receiveQueue.get()
             self.detectHands()
-            if self.hand_landmarks is not None:
-                if not dataQueue.empty():
-                    try:
-                        dataQueue.get(timeout=0.01)
-                    except:
-                        pass
-                dataQueue.put(self.hand_landmarks)
+            if not dataQueue.empty():
+                try:
+                    dataQueue.get(timeout=0.01)
+                except:
+                    pass
+            dataQueue.put(self.hand_landmarks)
+            cv2.imshow(str(self.num), self.processedFrame)
+            cv2.waitKey(1)
 
     def read(self):
         # return the frame most recently read
