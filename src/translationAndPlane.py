@@ -1,3 +1,5 @@
+import numpy as np
+
 def createPlane(P1,P2, P3):
     v1 = P2 - P1
     v2 = P3 - P1
