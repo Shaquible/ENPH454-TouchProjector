@@ -134,3 +134,20 @@ class Triangulation:
                 # get the rvec and tvec of the TL corner and the width and length of the projected image
 
                 # return the rvec and tvec of the TL corner and the width and length of the projected image
+    
+    def getProjectorTransform(self, camCorners: np.ndarray, imCorners: np.ndarray, imWidth, imHeight) -> np.ndarray:
+        camCorners = camCorners[0]
+        temp = camCorners[2].copy()
+        camCorners[2] = camCorners[3]
+        camCorners[3] = temp
+        imCorners = imCorners[0]
+        temp = imCorners[2].copy()
+        imCorners[2] = imCorners[3]
+        imCorners[3] = temp
+        pts1 = np.float32(camCorners)
+        pts2 = np.float32(imCorners)
+        matrix = cv2.getPerspectiveTransform(pts2,pts1)
+        #return coordinates of the corners of the image in the camera frame
+        TL = np.matmul(matrix, np.array([0, 0, 1]))
+        BR = np.matmul(matrix, np.array([imWidth, imHeight, 1]))
+        return TL, BR
