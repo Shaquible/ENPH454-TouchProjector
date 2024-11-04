@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from picoControl import PicoControl
 
 
 class Camera:
@@ -53,15 +54,15 @@ class Triangulation:
         return False
 
     def calcPoses(self, corners1: np.ndarray, corners2: np.ndarray, markerWidth) -> None:
-        #calculate mean x of the corners
-        mean1 = np.mean(corners1[0][0][:,0])
-        mean2 = np.mean(corners2[0][0][:,0])
+        # calculate mean x of the corners
+        mean1 = np.mean(corners1[0][0][:, 0])
+        mean2 = np.mean(corners2[0][0][:, 0])
 
         if mean1 > mean2:
             self.cam1, self.cam2 = self.cam2, self.cam1
         rvec1, tvec1, markerpos1 = cv2.aruco.estimatePoseSingleMarkers(
             corners1[0], markerWidth, self.cam1.mtx, self.cam1.dist)
-       
+
         R1 = cv2.Rodrigues(rvec1)[0]
         rvec2, tvec2, markerpos2 = cv2.aruco.estimatePoseSingleMarkers(
             corners2[0], markerWidth, self.cam2.mtx, self.cam2.dist)
@@ -79,7 +80,7 @@ class Triangulation:
         self.cam2.setPose(pose2)
         # get the relative pose of the two cameras
         self.relativePose = np.matmul(pose1, np.linalg.inv(pose2))
-        
+
         return
 
     def get3dPoint(self, point1: np.ndarray, point2: np.ndarray) -> np.ndarray:
@@ -91,3 +92,45 @@ class Triangulation:
         position = cv2.triangulatePoints(
             self.cam1.projection, self.cam2.projection, undistort1, undistort2)
         return position
+
+    def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture, markerWidth: int) -> bool:
+        pico = PicoControl(0)
+        pico.setIRCutFilter(1)
+        # figure out coordinates of this and add white boarder
+        cv2.imshow("Aruco", cv2.imread("src/aruco10.png"))
+        cv2.waitKey(0)
+        # do a screen grab of the display
+        # find the marker in the screen shot to get pixel coordinates
+        while True:
+            # read in images
+            grabbed1, frame1 = cap1.read()
+            grabbed2, frame2 = cap2.read()
+            # detect markers
+            gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
+            (corners1, ids1, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray1)
+            gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+            (corners2, ids2, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray2)
+            if ids1 is not None and ids2 is not None:
+                pico.setIRCutFilter(0)
+                cv2.destroyAllWindows()
+                # figure out which cam is which and
+                mean1 = np.mean(corners1[0][0][:, 0])
+                mean2 = np.mean(corners2[0][0][:, 0])
+                if mean1 > mean2:
+                    self.cam1, self.cam2 = self.cam2, self.cam1
+                corners1 = corners1[0]
+                corners2 = corners2[0]
+                points = np.zeros((4, 3))
+                for i, corner1, corner2 in enumerate(zip(corners1, corners2)):
+                    points[i] = self.get3dPoint(corner1, corner2)[:3]
+                # markers  TL TR BR BL
+                # markerWidth = np.mean(
+                #     [np.linalg.norm(points[0] - points[1]), np.linalg.norm(points[0] - points[3]), np.linalg.norm(points[1] - points[2]), np.linalg.norm(points[2] - points[3])])
+                # rvec1, tvec1, markerpos1 = cv2.aruco.estimatePoseSingleMarkers(
+                #     corners1[0], markerWidth, self.cam1.mtx, self.cam1.dist)
+
+                # find rotation and translation of the marker from the 3d points
+                # use the pixel coordinates of the marker and the length of the edges to extrapolate the TL and BR corners
+                # get the rvec and tvec of the TL corner and the width and length of the projected image
+
+                # return the rvec and tvec of the TL corner and the width and length of the projected image
