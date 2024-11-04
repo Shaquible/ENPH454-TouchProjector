@@ -18,8 +18,6 @@ class rollingAvg:
         self.yind = 0
         self.zind = 0
         self.pos = [0,0,0]
-        
-    def smoothPos(self,pos):
 
     def smoothPos(self, pos):
         self.xs[self.xind] = pos[0]
@@ -72,16 +70,16 @@ class rollingAvg_PID:
         yD = (self.yerrs[self.yind] - self.yerrs[(self.yind-1)%self.y_len])/timeStep
         zD = (self.zerrs[self.zind] - self.zerrs[(self.zind-1)%self.z_len])/timeStep
         
-        outPos = [0,0,0]
-        outPos[0] = self.tunMtx[0]*self.xerrs[self.xind] + self.tunMtx[1]*xI + self.tunMTX[2]*xD
-        outPos[1] = self.tunMtx[0]*self.yerrs[self.yind] + self.tunMtx[1]*yI + self.tunMTX[2]*yD
-        outPos[2] = self.tunMtx[0]*self.zerrs[self.zind] + self.tunMtx[1]*zI + self.tunMTX[2]*zD
+        self.pos = [0,0,0]
+        self.pos[0] = self.tunMtx[0]*self.xerrs[self.xind] + self.tunMtx[1]*xI + self.tunMTX[2]*xD
+        self.pos[1] = self.tunMtx[0]*self.yerrs[self.yind] + self.tunMtx[1]*yI + self.tunMTX[2]*yD
+        self.pos[2] = self.tunMtx[0]*self.zerrs[self.zind] + self.tunMtx[1]*zI + self.tunMTX[2]*zD
         
         self.xind = (self.xind + 1)%self.x_len
         self.yind = (self.yind + 1)%self.y_len
         self.zind = (self.zind + 1)%self.z_len
         
-        return outPos
+        return self.pos
             
             
 # class SavitzkyGolay:
