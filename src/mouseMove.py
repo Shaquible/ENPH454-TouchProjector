@@ -15,8 +15,8 @@ class mouseMove:
             self.yRes = m.height
 
     def moveMouse(self, position, leftClick=True):
-        x = (position[0])/self.xlen*self.xRes
-        y = (position[1])/self.ylen*self.yRes
+        x = (position[0])*self.xRes/self.xlen
+        y = (position[1])*self.yRes/self.ylen
         z = position[2]
         if x < 0:
             x = 0
@@ -26,11 +26,11 @@ class mouseMove:
             x = self.xRes
         if y > self.yRes:
             y = self.yRes
-        if not self.lastState and z < self.zThresh:
-            pyautogui.mouseDown(button='left', _pause=False)
-            self.lastState = True
-        elif self.lastState and z > self.zThresh:
-            pyautogui.mouseUp(button='left', _pause=False)
-            self.lastState = False
+        # if not self.lastState and z < self.zThresh:
+        #     pyautogui.mouseDown(button='left', _pause=False)
+        #     self.lastState = True
+        # elif self.lastState and z > self.zThresh:
+        #     pyautogui.mouseUp(button='left', _pause=False)
+        #     self.lastState = False
         pyautogui.moveTo(x, y, _pause=False)
         return

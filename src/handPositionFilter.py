@@ -67,7 +67,7 @@ class lowPassVelocity:
 class deEmphasis:
     def __init__(self, coef=0.95):
         self.coef = coef
-        self.prev = np.zeros(4)
+        self.prev = np.zeros(3)
 
     def smoothPos(self, pos):
         out = (pos + self.prev*(self.coef))/(1+self.coef)

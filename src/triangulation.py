@@ -94,6 +94,8 @@ class Triangulation:
         position = cv2.triangulatePoints(
             self.cam1.projection, self.cam2.projection, undistort1, undistort2)
         position = position.reshape(4)
+        #return position[:3]
+        #print(position)
         return (position[:3]/position[3])
 
     def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture):
@@ -101,8 +103,10 @@ class Triangulation:
         # pico.setIRCutFilter(1)
         # figure out coordinates of this and add white boarder
         imS = cv2.resize(cv2.imread("src/aruco10.png"), (500, 500))
+        imS = cv2.imread("src/aruco10.png")
         cv2.imshow("Aruco", imS)
-
+        #move window to top left
+        cv2.moveWindow("Aruco", 0, 0)
         cv2.waitKey(1)
         time.sleep(2)
         screenShot = np.array(ImageGrab.grab())
@@ -112,6 +116,10 @@ class Triangulation:
         (screenShotCorners, idsScreenShot,
          rejectedImgPoints) = self.ArucoDetector.detectMarkers(screenShot)
         screenShotCorners = screenShotCorners[0]
+        screenShotCorners = screenShotCorners.reshape(4, 2)
+        temp = screenShotCorners[2].copy()
+        screenShotCorners[2] = screenShotCorners[3]
+        screenShotCorners[3] = temp
         # do a screen grab of the display
         # find the marker in the screen shot to get pixel coordinates
         while True:
@@ -134,15 +142,32 @@ class Triangulation:
                 if mean1 > mean2:
                     self.cam1, self.cam2 = self.cam2, self.cam1
                 corners1 = corners1[0]
+                corners1 = corners1.reshape(4, 2)
                 corners2 = corners2[0]
+                corners2 = corners2.reshape(4, 2)
+                temp = corners1[2].copy()
+                corners1[2] = corners1[3]
+                corners1[3] = temp
+                temp = corners2[2].copy()
+                corners2[2] = corners2[3]
+                corners2[3] = temp
+
+                
                 cam1TL, cam1TR, cam1BL, cam1BR = self.getProjectorTransform(
                     np.copy(corners1), np.copy(screenShotCorners), screenShot.shape[1], screenShot.shape[0])
                 cam2TL, cam2TR, cam2BL, cam2BR = self.getProjectorTransform(
                     np.copy(corners2), np.copy(screenShotCorners), screenShot.shape[1], screenShot.shape[0])
-                TL = self.get3dPoint(cam1TL, cam2TL)
-                TR = self.get3dPoint(cam1TR, cam2TR)
-                BL = self.get3dPoint(cam1BL, cam2BL)
-                pose1 = getTransformationMatrix(TL, TR, BL)
+                # TL = self.get3dPoint(cam1TL, cam2TL)
+                # TR = self.get3dPoint(cam1TR, cam2TR)
+                # BL = self.get3dPoint(cam1BL, cam2BL)
+                TL = self.get3dPoint(corners1[0], corners2[0])
+                TR = self.get3dPoint(corners1[1], corners2[1])
+                BL = self.get3dPoint(corners1[2], corners2[2])
+                zero = self.get3dPoint(cam1TL, cam2TL)
+                print(np.linalg.norm(TL-TR), np.linalg.norm(TL-BL), np.linalg.norm(TR-BL))
+                print(TL, TR, BL)
+                pose1 = getTransformationMatrix(TL, TR, BL, zero)
+                print(pose1)
                 pose2 = np.matmul(np.linalg.inv(self.relativePose), pose1)
                 self.cam1.setPose(pose1)
                 self.cam2.setPose(pose2)
@@ -150,19 +175,12 @@ class Triangulation:
                 topR = self.get3dPoint(cam1TR, cam2TR)
                 botL = self.get3dPoint(cam1BL, cam2BL)
                 botR = self.get3dPoint(cam1BR, cam2BR)
-                print(topL, topR, botL, botR)
+                physicalWidth = np.linalg.norm(topR-topL)
+                physicalHeight = np.linalg.norm(botL-topL)
                 # we might want to update the cameras poses here
-                return
+                return physicalHeight, physicalWidth
 
     def getProjectorTransform(self, camCorners: np.ndarray, imCorners: np.ndarray, imWidth, imHeight):
-        camCorners = camCorners.reshape(4, 2)
-        imCorners = imCorners.reshape(4, 2)
-        temp = camCorners[2].copy()
-        camCorners[2] = camCorners[3]
-        camCorners[3] = temp
-        temp = imCorners[2].copy()
-        imCorners[2] = imCorners[3]
-        imCorners[3] = temp
         pts1 = np.float32(camCorners)
         pts2 = np.float32(imCorners)
         matrix = cv2.getPerspectiveTransform(pts2, pts1)
@@ -178,7 +196,7 @@ class Triangulation:
         return TL, TR, BL, BR
 
 
-def getTransformationMatrix(TL, TR, BL):
+def getTransformationMatrix(TL, TR, BL, zero):
     x = TR - TL
     y = BL - TL
     z = np.cross(x, y)
@@ -189,8 +207,8 @@ def getTransformationMatrix(TL, TR, BL):
     z = z/np.linalg.norm(z)
     T = np.eye(4)
     # might need to subtract TL from the 3 rows one post said so, but cant tell till we test and fix the calibration
-    T[0, :3] = x
-    T[1, :3] = y
-    T[2, :3] = z
-    T[:3, 3] = TL
+    T[:3, 0] = x 
+    T[:3, 1] = y 
+    T[:3, 2] = z 
+    T[:3, 3] = zero
     return T
