@@ -188,6 +188,7 @@ def getTransformationMatrix(TL, TR, BL):
     y = y/np.linalg.norm(y)
     z = z/np.linalg.norm(z)
     T = np.eye(4)
+    # might need to subtract TL from the 3 rows one post said so, but cant tell till we test and fix the calibration
     T[0, :3] = x
     T[1, :3] = y
     T[2, :3] = z
