@@ -28,5 +28,7 @@ while True:
 tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
 tri.relativePose = npfile
 tri.cam2.setPose(np.linalg.inv(tri.relativePose))
+# tri.getProjectorPositionStream(1, 1)
 tri.getProjectorPositionStream(cap1, cap2)
-
+cap1.release()
+cap2.release()
