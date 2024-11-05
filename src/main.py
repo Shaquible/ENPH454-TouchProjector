@@ -56,7 +56,7 @@ def main():
     tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
     tri.relativePose = npfile
     tri.cam2.setPose(np.linalg.inv(tri.relativePose))
-    physHeight, physWidth = tri.getProjectorPositionStream(cap1, cap2)
+    xy_to_uv_mat, camFlip = tri.getProjectorPositionStream(cap1, cap2)
     pose1 = tri.cam1.pose
     pose2 = tri.cam2.pose
     npfile = np.load("cameraIntrinsics/IRCam1.npz")
@@ -65,7 +65,11 @@ def main():
     npfile = np.load("cameraIntrinsics/IRCam2.npz")
     mtx2 = npfile["mtx"]
     dist2 = npfile["dist"]
-    tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
+    # check if in the orientation the camera order was flipped
+    if camFlip:
+        tri = Triangulation(Camera(mtx2, dist2), Camera(mtx1, dist1))
+    else:
+        tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
     tri.relativePose = npfile
     tri.cam1.setPose(pose1)
     tri.cam2.setPose(pose2)
@@ -89,7 +93,7 @@ def main():
         1, crop2, q2, capQ2, capQ1, processQ2, processQ1)))
     for proc in procs:
         proc.start()
-    mouse = mouseMove(xlen = physWidth, ylen = physHeight)
+    mouse = mouseMove(xy_to_uv_mat)
     dataCollectLen = 500
     times = np.zeros(dataCollectLen)
     xs = np.zeros(dataCollectLen)
@@ -124,7 +128,7 @@ def main():
                 dt = time.time() - t0
                 t0 = time.time()
 
-                #pos = positionFilter.smoothPos(pos)
+                # pos = positionFilter.smoothPos(pos)
                 position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f}".format(
                     pos[0]*100, pos[1]*100, pos[2]*100, dt)
                 print(position, end="\r")

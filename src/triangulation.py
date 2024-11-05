@@ -94,18 +94,16 @@ class Triangulation:
         position = cv2.triangulatePoints(
             self.cam1.projection, self.cam2.projection, undistort1, undistort2)
         position = position.reshape(4)
-        #return position[:3]
-        #print(position)
         return (position[:3]/position[3])
 
     def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture):
+        camFlip = False
         # pico = PicoControl(0)
         # pico.setIRCutFilter(1)
         # figure out coordinates of this and add white boarder
-        imS = cv2.resize(cv2.imread("src/aruco10.png"), (500, 500))
-        imS = cv2.imread("src/aruco10.png")
+        imS = cv2.imread("src/arucoQuad.png")
         cv2.imshow("Aruco", imS)
-        #move window to top left
+        # move window to top left
         cv2.moveWindow("Aruco", 0, 0)
         cv2.waitKey(1)
         time.sleep(2)
@@ -115,11 +113,15 @@ class Triangulation:
         # screenShot = cv2.imread("screenShot.png")
         (screenShotCorners, idsScreenShot,
          rejectedImgPoints) = self.ArucoDetector.detectMarkers(screenShot)
-        screenShotCorners = screenShotCorners[0]
-        screenShotCorners = screenShotCorners.reshape(4, 2)
-        temp = screenShotCorners[2].copy()
-        screenShotCorners[2] = screenShotCorners[3]
-        screenShotCorners[3] = temp
+        for corner, id in zip(screenShotCorners, idsScreenShot):
+            if id == 10:
+                screenTL = corner[0]
+            elif id == 11:
+                screenTR = corner[1]
+            elif id == 12:
+                screenBL = corner[3]
+            elif id == 13:
+                screenBR = corner[2]
         # do a screen grab of the display
         # find the marker in the screen shot to get pixel coordinates
         while True:
@@ -133,70 +135,53 @@ class Triangulation:
             # detect markers
             (corners1, ids1, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray1)
             (corners2, ids2, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray2)
-            if ids1 is not None and ids2 is not None:
-                # pico.setIRCutFilter(0)
-                cv2.destroyAllWindows()
-                # figure out which cam is which and
+            if len(ids1) == 4 and len(ids2) == 4:
+                # figure out which cam is which
                 mean1 = np.mean(corners1[0][0][:, 0])
                 mean2 = np.mean(corners2[0][0][:, 0])
                 if mean1 > mean2:
                     self.cam1, self.cam2 = self.cam2, self.cam1
-                corners1 = corners1[0]
-                corners1 = corners1.reshape(4, 2)
-                corners2 = corners2[0]
-                corners2 = corners2.reshape(4, 2)
-                temp = corners1[2].copy()
-                corners1[2] = corners1[3]
-                corners1[3] = temp
-                temp = corners2[2].copy()
-                corners2[2] = corners2[3]
-                corners2[3] = temp
+                    camFlip = True
+                for corner, id in zip(corners1, ids1):
+                    if id == 10:
+                        cam1TL = corner[0]
+                    elif id == 11:
+                        cam1TR = corner[1]
+                    elif id == 12:
+                        cam1BL = corner[3]
+                    elif id == 13:
+                        cam1BR = corner[2]
+                for corner, id in zip(corners2, ids2):
+                    if id == 10:
+                        cam2TL = corner[0]
+                    elif id == 11:
+                        cam2TR = corner[1]
+                    elif id == 12:
+                        cam2BL = corner[3]
+                    elif id == 13:
+                        cam2BR = corner[2]
 
-                
-                cam1TL, cam1TR, cam1BL, cam1BR = self.getProjectorTransform(
-                    np.copy(corners1), np.copy(screenShotCorners), screenShot.shape[1], screenShot.shape[0])
-                cam2TL, cam2TR, cam2BL, cam2BR = self.getProjectorTransform(
-                    np.copy(corners2), np.copy(screenShotCorners), screenShot.shape[1], screenShot.shape[0])
-                # TL = self.get3dPoint(cam1TL, cam2TL)
-                # TR = self.get3dPoint(cam1TR, cam2TR)
-                # BL = self.get3dPoint(cam1BL, cam2BL)
-                TL = self.get3dPoint(corners1[0], corners2[0])
-                TR = self.get3dPoint(corners1[1], corners2[1])
-                BL = self.get3dPoint(corners1[2], corners2[2])
-                zero = self.get3dPoint(cam1TL, cam2TL)
-                print(np.linalg.norm(TL-TR), np.linalg.norm(TL-BL), np.linalg.norm(TR-BL))
-                print(TL, TR, BL)
-                pose1 = getTransformationMatrix(TL, TR, BL, zero)
+                TL = self.get3dPoint(cam1TL, cam2TL)
+                TR = self.get3dPoint(cam1TR, cam2TR)
+                BL = self.get3dPoint(cam1TR, cam2BL)
+                pose1 = getTransformationMatrix(TL, TR, BL)
                 print(pose1)
                 pose2 = np.matmul(np.linalg.inv(self.relativePose), pose1)
                 self.cam1.setPose(pose1)
                 self.cam2.setPose(pose2)
-                topL = self.get3dPoint(cam1TL, cam2TL)
-                topR = self.get3dPoint(cam1TR, cam2TR)
-                botL = self.get3dPoint(cam1BL, cam2BL)
-                botR = self.get3dPoint(cam1BR, cam2BR)
-                physicalWidth = np.linalg.norm(topR-topL)
-                physicalHeight = np.linalg.norm(botL-topL)
-                # we might want to update the cameras poses here
-                return physicalHeight, physicalWidth
-
-    def getProjectorTransform(self, camCorners: np.ndarray, imCorners: np.ndarray, imWidth, imHeight):
-        pts1 = np.float32(camCorners)
-        pts2 = np.float32(imCorners)
-        matrix = cv2.getPerspectiveTransform(pts2, pts1)
-        # return coordinates of the corners of the image in the camera frame
-        TL = np.matmul(matrix, np.array([0, 0, 1]))
-        TL = TL[:2]/TL[2]
-        TR = np.matmul(matrix, np.array([imWidth, 0, 1]))
-        TR = TR[:2]/TR[2]
-        BL = np.matmul(matrix, np.array([0, imHeight, 1]))
-        BL = BL[:2]/BL[2]
-        BR = np.matmul(matrix, np.array([imWidth, imHeight, 1]))
-        BR = BR[:2]/BR[2]
-        return TL, TR, BL, BR
+                TL = self.get3dPoint(cam1TL, cam2TL)
+                TR = self.get3dPoint(cam1TR, cam2TR)
+                BL = self.get3dPoint(cam1BL, cam2BL)
+                BR = self.get3dPoint(cam1BR, cam2BR)
+                points1 = np.array([TL[:2], TR[:2], BL[:2], BR[:2]])
+                points2 = np.array([screenTL, screenTR, screenBL, screenBR])
+                matrix = cv2.getPerspectiveTransform(points1, points2)
+                # pico.setIRCutFilter(0)
+                cv2.destroyAllWindows()
+                return matrix, camFlip
 
 
-def getTransformationMatrix(TL, TR, BL, zero):
+def getTransformationMatrix(TL, TR, BL):
     x = TR - TL
     y = BL - TL
     z = np.cross(x, y)
@@ -207,8 +192,8 @@ def getTransformationMatrix(TL, TR, BL, zero):
     z = z/np.linalg.norm(z)
     T = np.eye(4)
     # might need to subtract TL from the 3 rows one post said so, but cant tell till we test and fix the calibration
-    T[:3, 0] = x 
-    T[:3, 1] = y 
-    T[:3, 2] = z 
-    T[:3, 3] = zero
+    T[:3, 0] = x
+    T[:3, 1] = y
+    T[:3, 2] = z
+    T[:3, 3] = TL
     return T
