@@ -137,11 +137,7 @@ class Triangulation:
             (corners2, ids2, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray2)
             if len(ids1) == 4 and len(ids2) == 4:
                 # figure out which cam is which
-                mean1 = np.mean(corners1[0][0][:, 0])
-                mean2 = np.mean(corners2[0][0][:, 0])
-                if mean1 > mean2:
-                    self.cam1, self.cam2 = self.cam2, self.cam1
-                    camFlip = True
+
                 for corner, id in zip(corners1, ids1):
                     if id == 10:
                         cam1TL = corner[0]
@@ -160,6 +156,9 @@ class Triangulation:
                         cam2BL = corner[3]
                     elif id == 13:
                         cam2BR = corner[2]
+                if cam1TL[0] > cam2TL[0]:
+                    self.cam1, self.cam2 = self.cam2, self.cam1
+                    camFlip = True
 
                 TL = self.get3dPoint(cam1TL, cam2TL)
                 TR = self.get3dPoint(cam1TR, cam2TR)
