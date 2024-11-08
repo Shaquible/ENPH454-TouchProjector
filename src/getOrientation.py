@@ -23,4 +23,5 @@ while True:
 
 tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
 tri.getCameraPositionsStream(cap1, cap2, markerWidth)
-np.save("relativePose", tri.relativePose)
+np.save("src/relativePose", tri.relativePose)
+print(tri.relativePose)
