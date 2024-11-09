@@ -1,6 +1,6 @@
 from handTracker import HandTracker
 from webcamStream import openStream
-from triangulation import Triangulation, Camera
+from triangulationCharuco import Triangulation, Camera
 import mediapipe as mp
 import numpy as np
 from multiprocessing import Process, Queue

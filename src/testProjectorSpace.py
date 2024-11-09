@@ -1,8 +1,7 @@
-import triangulation as tri
 import numpy as np
 
 from webcamStream import openStream
-from triangulation import Triangulation, Camera
+from triangulationCharuco import Triangulation, Camera
 import cv2
 import numpy as np
 imHeight = 1080
