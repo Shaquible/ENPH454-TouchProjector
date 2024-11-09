@@ -56,9 +56,9 @@ def main():
     tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
     tri.relativePose = npfile
     tri.cam2.setPose(np.linalg.inv(tri.relativePose))
-    xy_to_uv_mat, camFlip = tri.getProjectorPositionStream(cap1, cap2)
-    pose1 = tri.cam1.pose
-    pose2 = tri.cam2.pose
+    xy_to_uv_mat = tri.getProjectorPositionStream(cap1, cap2)
+    pose1 = tri.cam1.pose.copy()
+    pose2 = tri.cam2.pose.copy()
     npfile = np.load("cameraIntrinsics/IRCam1.npz")
     mtx1 = npfile["mtx"]
     dist1 = npfile["dist"]
@@ -66,10 +66,7 @@ def main():
     mtx2 = npfile["mtx"]
     dist2 = npfile["dist"]
     # check if in the orientation the camera order was flipped
-    if camFlip:
-        tri = Triangulation(Camera(mtx2, dist2), Camera(mtx1, dist1))
-    else:
-        tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
+    tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
     tri.relativePose = npfile
     tri.cam1.setPose(pose1)
     tri.cam2.setPose(pose2)

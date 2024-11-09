@@ -5,6 +5,7 @@ from PIL import ImageGrab
 import time
 import scipy.optimize as opt
 
+
 class Camera:
     def __init__(self, mtx, dist) -> None:
         self.mtx = mtx
@@ -121,7 +122,7 @@ class Triangulation:
         nMarkers = 21
         markerRow = 7
         markerHeight = 3
-        screenShotCornersOut = np.zeros((nMarkers, 4,2))
+        screenShotCornersOut = np.zeros((nMarkers, 4, 2))
         extras = 0
         for i, id in enumerate(idOrder):
             if id >= nMarkers:
@@ -133,8 +134,6 @@ class Triangulation:
             # read in images
             grabbed1, frame1 = cap1.read()
             grabbed2, frame2 = cap2.read()
-            # frame1 = cv2.imread("src/arucoGrid.png")
-            # frame2 = cv2.imread("src/arucoGrid.png")
             # frame1 = cv2.imread("cam1.png")
             # frame2 = cv2.imread("cam2.png")
             gray1, r1, g1 = cv2.split(frame1)
@@ -160,11 +159,11 @@ class Triangulation:
                 for i, id in enumerate(idOrder):
                     cam2Corners[i] = corners2[id][0]
                 # figure out which cam is which
-                # cv2.imwrite("cam1.png", frame1)
-                # cv2.imwrite("cam2.png", frame2)
+                cv2.imwrite("cam1.png", frame1)
+                cv2.imwrite("cam2.png", frame2)
                 #
-                
-                points = np.zeros((nMarkers*4,3))
+
+                points = np.zeros((nMarkers*4, 3))
                 for i in range(nMarkers):
                     for j, (c1, c2) in enumerate(zip(cam1Corners[i], cam2Corners[i])):
                         points[i*4+j] = self.get3dPoint(c1, c2)
@@ -176,24 +175,30 @@ class Triangulation:
                 self.cam1.setPose(pose1)
                 self.cam2.setPose(pose2)
                 TL = self.get3dPoint(cam1Corners[0][0], cam2Corners[0][0])
-                TR = self.get3dPoint(cam1Corners[markerRow][1], cam2Corners[markerRow][1])
-                BL = self.get3dPoint(cam1Corners[(markerHeight-1)*markerRow][3], cam2Corners[markerRow*(markerHeight-1)][3])
-                BR = self.get3dPoint(cam1Corners[nMarkers-1][2], cam2Corners[nMarkers-1][2])
+                TR = self.get3dPoint(
+                    cam1Corners[markerRow-1][1], cam2Corners[markerRow-1][1])
+                BL = self.get3dPoint(cam1Corners[(
+                    markerHeight-1)*markerRow][3], cam2Corners[markerRow*(markerHeight-1)][3])
+                BR = self.get3dPoint(
+                    cam1Corners[nMarkers-1][2], cam2Corners[nMarkers-1][2])
+                print(TL, TR, BL, BR)
                 screenTL = screenShotCornersOut[0][0]
-                screenTR = screenShotCornersOut[markerRow][1]
+                screenTR = screenShotCornersOut[markerRow-1][1]
                 screenBL = screenShotCornersOut[(markerHeight-1)*markerRow][3]
                 screenBR = screenShotCornersOut[nMarkers-1][2]
-                points1 = np.array([TL[:2], TR[:2], BL[:2], BR[:2]], dtype='float32')
-                points2 = np.array([screenTL, screenTR, screenBL, screenBR], dtype='float32')
-                print(points1, points2)
-                print(points1.shape, points2.shape)
+                points1 = np.array(
+                    [TL[:2], TR[:2], BL[:2], BR[:2]], dtype='float32')
+                points2 = np.array(
+                    [screenTL, screenTR, screenBL, screenBR], dtype='float32')
+                print(points1)
+                print(points2)
                 matrix = cv2.getPerspectiveTransform(points1, points2)
                 # pico.setIRCutFilter(0)
                 cv2.destroyAllWindows()
-                return matrix, camFlip
+                return matrix
 
 
-def getTransformationMatrix(x,y,z, offset):
+def getTransformationMatrix(x, y, z, offset):
     T = np.eye(4)
     # might need to subtract TL from the 3 rows one post said so, but cant tell till we test and fix the calibration
     T[:3, 0] = x
@@ -202,27 +207,29 @@ def getTransformationMatrix(x,y,z, offset):
     T[:3, 3] = offset
     return T
 
+
 def getPlaneVectors(points):
     xs = points[:, 0]
     ys = points[:, 1]
     zs = points[:, 2]
-    result = opt.minimize(planeErr, [0, 0, 0], args=(xs, ys, zs))
+    result = opt.minimize(planeErr, [0, 0, 0], args=(
+        xs, ys, zs), method='Nelder-Mead', tol=1e-6)
     mse = planeErr(result.x, xs, ys, zs)
     print(mse, np.sqrt(mse))
     a, b, c = result.x
     v1 = np.array([xs[0], ys[0], planeZ(xs[0], ys[0], a, b, c)])
     v2 = np.array([xs[1], ys[1], planeZ(xs[1], ys[1], a, b, c)])
-    v3 = np.array([xs[3], ys[3], planeZ(xs[3], ys[3], a, b, c)])
     xhat = v2 - v1
-    yhat = v3 - v1
-    zhat = np.cross(xhat, yhat)
+    zhat = np.array([a, b, 1])
     xhat = xhat/np.linalg.norm(xhat)
     zhat = zhat/np.linalg.norm(zhat)
     yhat = np.cross(zhat, xhat)
     return xhat, yhat, zhat, v1
 
-def planeErr(coefs,x,y,z):
-    return np.mean(np.square((coefs[0]*x + coefs[1]*y + coefs[2]) - z))
+
+def planeErr(coefs, x, y, z):
+    return np.mean(np.square(1000*(coefs[0]*x + coefs[1]*y + z - coefs[2])))
+
 
 def planeZ(x, y, a, b, c):
-    return (a*x + b*y + c)
+    return (c - a*x - b*y)
