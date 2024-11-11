@@ -25,6 +25,7 @@ def draw_landmarks_on_image(annotated_image, detection_result):
         hand_landmarks_proto.landmark.extend([
             landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks
         ])
+        
         solutions.drawing_utils.draw_landmarks(
             annotated_image,
             hand_landmarks_proto,
@@ -43,7 +44,7 @@ def calc_bounding_rect(image, landmarks):
 
     landmark_array = np.empty((0, 2), int)
 
-    for _, landmark in enumerate(landmarks.landmark):
+    for _, landmark in enumerate(landmarks):
         landmark_x = min(int(landmark.x * image_width), image_width - 1)
         landmark_y = min(int(landmark.y * image_height), image_height - 1)
 
@@ -59,9 +60,10 @@ def draw_info_text(image, brect, hand_sign_id):
     cv2.rectangle(image, (brect[0], brect[1]), (brect[2], brect[1] - 22),
                  (0, 0, 0), -1)
 
-    info_text = hand_sign_id
-    cv2.putText(image, info_text, (brect[0] + 5, brect[1] - 4),
-               cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+    # info_text = %f{hand_sign_id}
+    # cv2.putText(image, info_text, (brect[0] + 5, brect[1] - 4),
+    #            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+    print(hand_sign_id)
 
     return image
 
