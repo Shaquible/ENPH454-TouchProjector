@@ -24,7 +24,10 @@ class Triangulation:
     def __init__(self, cam1: Camera, cam2: Camera) -> None:
         dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_1000)
         parameters = cv2.aruco.DetectorParameters()
+        parameters.minMarkerPerimeterRate = 0.01
         parameters.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+        self.charucoBoard = cv2.aruco.CharucoBoard(
+            (4, 6), 0.04, 0.02, dictionary)
         self.ArucoDetector = cv2.aruco.ArucoDetector(dictionary, parameters)
         self.cam1 = cam1
         self.cam2 = cam2
@@ -38,13 +41,17 @@ class Triangulation:
             grabbed2, frame2 = cap2.read()
             # detect markers
             gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
+            # gray1 = cv2.undistort(gray1, self.cam1.mtx, self.cam1.dist)
             (corners1, ids1, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray1)
             gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+            # gray2 = cv2.undistort(gray2, self.cam2.mtx, self.cam2.dist)
             (corners2, ids2, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray2)
             # if markers are found in both images
             if ids1 is not None and ids2 is not None:
-                self.calcPoses(corners1, corners2, markerWidth)
-                return True
+                found = self.calcPoses(corners1, corners2, ids1, ids2,
+                                       gray1, gray2)
+                if found:
+                    return True
 
     def getCameraPositionsImage(self, frame1: np.ndarray, frame2: np.ndarray, markerWidth: int) -> bool:
         gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
@@ -52,23 +59,42 @@ class Triangulation:
         gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
         (corners2, ids2, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray2)
         if ids1 is not None and ids2 is not None:
-            self.calcPoses(corners1, corners2, markerWidth)
-            return True
+            found = self.calcPoses(corners1, corners2, ids1, ids2,
+                                   gray1, gray2)
+            if found:
+                return True
         return False
 
-    def calcPoses(self, corners1: np.ndarray, corners2: np.ndarray, markerWidth) -> None:
-        # calculate mean x of the corners
-        mean1 = np.mean(corners1[0][0][:, 0])
-        mean2 = np.mean(corners2[0][0][:, 0])
+    def getCharucoCorner(self, corners: np.ndarray, ids: np.ndarray, im: np.ndarray, cam: Camera) -> np.ndarray:
+        if cam is not None:
+            charuco_retval, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(
+                corners, ids, im, self.charucoBoard, cameraMatrix=cam.mtx, distCoeffs=cam.dist)
+        else:
+            charuco_retval, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(
+                corners, ids, im, self.charucoBoard)
+        if charuco_retval:
+            return charuco_corners, charuco_ids
+        return None, None
 
-        # if mean1 > mean2:
-        #     self.cam1, self.cam2 = self.cam2, self.cam1
-        rvec1, tvec1, markerpos1 = cv2.aruco.estimatePoseSingleMarkers(
-            corners1[0], markerWidth, self.cam1.mtx, self.cam1.dist)
+    def calcPoses(self, corners1: np.ndarray, corners2: np.ndarray, ids1, ids2, im1, im2) -> None:
+        charuco_corners1, charuco_ids1 = self.getCharucoCorner(
+            corners1, ids1, im1, self.cam1)
+        if charuco_corners1 is not None:
+            retval1, rvec1, tvec1 = cv2.aruco.estimatePoseCharucoBoard(
+                charuco_corners1, charuco_ids1, self.charucoBoard, self.cam1.mtx, self.cam1.dist, None, None)
+        else:
+            return False
 
+        charuco_corners2, charuco_ids2 = self.getCharucoCorner(
+            corners2, ids2, im2, self.cam2)
+        if charuco_corners2 is not None:
+            retval2, rvec2, tvec2 = cv2.aruco.estimatePoseCharucoBoard(
+                charuco_corners2, charuco_ids2, self.charucoBoard, self.cam2.mtx, self.cam2.dist, None, None)
+        else:
+            return False
+        if not retval2 or not retval1:
+            return False
         R1 = cv2.Rodrigues(rvec1)[0]
-        rvec2, tvec2, markerpos2 = cv2.aruco.estimatePoseSingleMarkers(
-            corners2[0], markerWidth, self.cam2.mtx, self.cam2.dist)
         R2 = cv2.Rodrigues(rvec2)[0]
         print(tvec1, tvec2)
         print(rvec1, rvec2)
@@ -83,8 +109,7 @@ class Triangulation:
         self.cam2.setPose(pose2)
         # get the relative pose of the two cameras
         self.relativePose = np.matmul(pose1, np.linalg.inv(pose2))
-
-        return
+        return True
 
     def get3dPoint(self, point1: np.ndarray, point2: np.ndarray) -> np.ndarray:
         # get the 3d point from the two 2d points
@@ -98,11 +123,10 @@ class Triangulation:
         return (position[:3]/position[3])
 
     def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture):
-        camFlip = False
         # pico = PicoControl(0)
         # pico.setIRCutFilter(1)
         # figure out coordinates of this and add white boarder
-        imS = cv2.imread("src/arucoGrid.png")
+        imS = cv2.imread("src/ChArUco_Marker.png")
         cv2.imshow("Aruco", imS)
         # move window to top left
         cv2.moveWindow("Aruco", 0, 0)
@@ -112,22 +136,18 @@ class Triangulation:
         screenShot = cv2.cvtColor(screenShot, cv2.COLOR_BGR2GRAY)
         cv2.imwrite("screenShot.png", screenShot)
         # screenShot = cv2.imread("screenShot.png")
-        # screenShot = cv2.imread("src/arucoGrid.png")
+        # screenShot = cv2.imread("src/ChArUco_Marker.png")
         (screenShotCorners, idsScreenShot,
          rejectedImgPoints) = self.ArucoDetector.detectMarkers(screenShot)
+        screenShotCorners, idsScreenShot = self.getCharucoCorner(
+            screenShotCorners, idsScreenShot, screenShot, None)
         idsScreenShot = idsScreenShot.flatten()
         idOrder = np.argsort(idsScreenShot)
-        print(idsScreenShot[idOrder])
         print(idOrder.shape)
-        nMarkers = 21
-        markerRow = 7
-        markerHeight = 3
-        screenShotCornersOut = np.zeros((nMarkers, 4, 2))
-        extras = 0
+        nCorners = 15
+        screenShotCornersOut = np.zeros((nCorners, 2))
         for i, id in enumerate(idOrder):
-            if id >= nMarkers:
-                extras += 1
-            screenShotCornersOut[i-extras] = screenShotCorners[id][0]
+            screenShotCornersOut[i] = screenShotCorners[id][0]
         # do a screen grab of the display
         # find the marker in the screen shot to get pixel coordinates
         while True:
@@ -145,17 +165,15 @@ class Triangulation:
             (corners2, ids2, rejectedImgPoints) = self.ArucoDetector.detectMarkers(gray2)
             if ids1 is not None and ids2 is not None:
                 print(len(ids1), len(ids2))
-            if ids1 is not None and ids2 is not None and len(ids1) == nMarkers and len(ids2) == nMarkers:
+            if ids1 is not None and ids2 is not None and len(ids1) == nCorners and len(ids2) == nCorners:
                 ids1 = ids1.flatten()
                 ids2 = ids2.flatten()
-                cam1Corners = np.zeros((nMarkers, 4, 2))
-                cam2Corners = np.zeros((nMarkers, 4, 2))
+                cam1Corners = np.zeros((nCorners, 2))
+                cam2Corners = np.zeros((nCorners, 2))
                 idOrder = np.argsort(ids1)
-                print(ids1[idOrder])
                 for i, id in enumerate(idOrder):
                     cam1Corners[i] = corners1[id][0]
                 idOrder = np.argsort(ids2)
-                print(ids2[idOrder])
                 for i, id in enumerate(idOrder):
                     cam2Corners[i] = corners2[id][0]
                 # figure out which cam is which
@@ -163,10 +181,9 @@ class Triangulation:
                 cv2.imwrite("cam2.png", frame2)
                 #
 
-                points = np.zeros((nMarkers*4, 3))
-                for i in range(nMarkers):
-                    for j, (c1, c2) in enumerate(zip(cam1Corners[i], cam2Corners[i])):
-                        points[i*4+j] = self.get3dPoint(c1, c2)
+                points = np.zeros((nCorners, 3))
+                for i, (c1, c2) in enumerate(zip(cam1Corners[i], cam2Corners[i])):
+                    points[i] = self.get3dPoint(c1, c2)
                 print(points)
                 xhat, yhat, zhat, offSet = getPlaneVectors(points)
                 pose1 = getTransformationMatrix(xhat, yhat, zhat, offSet)
@@ -174,18 +191,17 @@ class Triangulation:
                 pose2 = np.matmul(np.linalg.inv(self.relativePose), pose1)
                 self.cam1.setPose(pose1)
                 self.cam2.setPose(pose2)
-                TL = self.get3dPoint(cam1Corners[0][0], cam2Corners[0][0])
+                TL = self.get3dPoint(cam1Corners[2], cam2Corners[2])
                 TR = self.get3dPoint(
-                    cam1Corners[markerRow-1][1], cam2Corners[markerRow-1][1])
-                BL = self.get3dPoint(cam1Corners[(
-                    markerHeight-1)*markerRow][3], cam2Corners[markerRow*(markerHeight-1)][3])
+                    cam1Corners[14], cam2Corners[14])
+                BL = self.get3dPoint(cam1Corners[0], cam2Corners[0])
                 BR = self.get3dPoint(
-                    cam1Corners[nMarkers-1][2], cam2Corners[nMarkers-1][2])
+                    cam1Corners[12], cam2Corners[12])
                 print(TL, TR, BL, BR)
-                screenTL = screenShotCornersOut[0][0]
-                screenTR = screenShotCornersOut[markerRow-1][1]
-                screenBL = screenShotCornersOut[(markerHeight-1)*markerRow][3]
-                screenBR = screenShotCornersOut[nMarkers-1][2]
+                screenTL = screenShotCornersOut[2]
+                screenTR = screenShotCornersOut[14]
+                screenBL = screenShotCornersOut[0]
+                screenBR = screenShotCornersOut[12]
                 points1 = np.array(
                     [TL[:2], TR[:2], BL[:2], BR[:2]], dtype='float32')
                 points2 = np.array(

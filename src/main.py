@@ -1,6 +1,6 @@
 from handTracker import HandTracker
 from webcamStream import openStream
-from triangulation import Triangulation, Camera
+from triangulationCharuco import Triangulation, Camera
 import mediapipe as mp
 import numpy as np
 from multiprocessing import Process, Queue
@@ -33,14 +33,15 @@ def main():
 
     mp_hands = mp.solutions.hands
     markerWidth = 0.1586
-    npfile = np.load("cameraIntrinsics/IRCam1.npz")
-    mtx1 = npfile["mtx"]
-    dist1 = npfile["dist"]
-    npfile = np.load("cameraIntrinsics/IRCam2.npz")
-    mtx2 = npfile["mtx"]
-    dist2 = npfile["dist"]
     cap1 = openStream(0, imHeight, imWidth, exposure=exposure)
     cap2 = openStream(1, imHeight, imWidth, exposure=exposure)
+    npfile = np.load("cameraIntrinsics/IRCam1Visible.npz")
+    mtx1 = npfile["mtx"]
+    dist1 = npfile["dist"]
+    npfile = np.load("cameraIntrinsics/IRCam2Visible.npz")
+    mtx2 = npfile["mtx"]
+    dist2 = npfile["dist"]
+    npfile = np.load("src/relativePose.npy")
     # need to crop the images
     while True:
         ret1, frame1 = cap1.read()
@@ -51,10 +52,25 @@ def main():
     cv2.destroyAllWindows()
     crop2 = cv2.selectROI("cam1", frame2)
     cv2.destroyAllWindows()
-    print(crop1, crop2)
 
     tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
-    tri.getCameraPositionsStream(cap1, cap2, markerWidth)
+    tri.relativePose = npfile
+    tri.cam2.setPose(np.linalg.inv(tri.relativePose))
+    xy_to_uv_mat = tri.getProjectorPositionStream(cap1, cap2)
+    pose1 = tri.cam1.pose.copy()
+    pose2 = tri.cam2.pose.copy()
+    npfile = np.load("cameraIntrinsics/IRCam1.npz")
+    mtx1 = npfile["mtx"]
+    dist1 = npfile["dist"]
+    npfile = np.load("cameraIntrinsics/IRCam2.npz")
+    mtx2 = npfile["mtx"]
+    dist2 = npfile["dist"]
+    # check if in the orientation the camera order was flipped
+    tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
+    tri.relativePose = npfile
+    tri.cam1.setPose(pose1)
+    tri.cam2.setPose(pose2)
+    # tri.getCameraPositionsStream(cap1, cap2, markerWidth)
     print("Position Found")
     cap1.release()
     cap2.release()
@@ -74,7 +90,7 @@ def main():
         1, crop2, q2, capQ2, capQ1, processQ2, processQ1)))
     for proc in procs:
         proc.start()
-    mouse = mouseMove()
+    mouse = mouseMove(xy_to_uv_mat)
     dataCollectLen = 500
     times = np.zeros(dataCollectLen)
     xs = np.zeros(dataCollectLen)
@@ -109,7 +125,7 @@ def main():
                 dt = time.time() - t0
                 t0 = time.time()
 
-                pos = positionFilter.smoothPos(pos)
+                # pos = positionFilter.smoothPos(pos)
                 position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f}".format(
                     pos[0]*100, pos[1]*100, pos[2]*100, dt)
                 print(position, end="\r")
