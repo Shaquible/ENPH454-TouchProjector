@@ -1,4 +1,6 @@
 import numpy as np
 
-npfile = np.load("src/relativePose.npy")
-print(npfile)
+npfile = np.load("cameraIntrinsics/IRCam2Visible.npz")
+print(npfile["mtx"])
+npfile = np.load("cameraIntrinsics/IRCam2.npz")
+print(npfile["mtx"])

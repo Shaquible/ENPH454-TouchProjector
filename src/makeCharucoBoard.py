@@ -5,13 +5,13 @@ import cv2
 # ------------------------------
 # ENTER YOUR PARAMETERS HERE:
 ARUCO_DICT = cv2.aruco.DICT_4X4_1000
-SQUARES_VERTICALLY = 4
-SQUARES_HORIZONTALLY = 6
+SQUARES_VERTICALLY = 3
+SQUARES_HORIZONTALLY = 7
 SQUARE_LENGTH = 0.03
-MARKER_LENGTH = 0.015
-LENGTH_PX = 3400   # total length of the page in pixels
-MARGIN_PX = 100   # size of the margin in pixels
-SAVE_NAME = 'ChArUco_Marker.png'
+MARKER_LENGTH = 0.02
+LENGTH_PX = 1900   # total length of the page in pixels
+MARGIN_PX = 50   # size of the margin in pixels
+SAVE_NAME = 'ChArUco_Marker_Display.png'
 # ------------------------------
 
 

@@ -1,15 +1,15 @@
 from webcamStream import openStream
-from triangulation import Triangulation, Camera
+from triangulationCharuco import Triangulation, Camera
 import cv2
 import numpy as np
 imHeight = 1080
 imWidth = 1920
 exposure = -8
 markerWidth = 0.1586
-npfile = np.load("cameraIntrinsics/IRCam1.npz")
+npfile = np.load("cameraIntrinsics/Cam1IR.npz")
 mtx1 = npfile["mtx"]
 dist1 = npfile["dist"]
-npfile = np.load("cameraIntrinsics/IRCam2.npz")
+npfile = np.load("cameraIntrinsics/Cam2IR.npz")
 mtx2 = npfile["mtx"]
 dist2 = npfile["dist"]
 cap1 = openStream(0, imHeight, imWidth, exposure=exposure)

@@ -35,10 +35,10 @@ def main():
     markerWidth = 0.1586
     cap1 = openStream(0, imHeight, imWidth, exposure=exposure)
     cap2 = openStream(1, imHeight, imWidth, exposure=exposure)
-    npfile = np.load("cameraIntrinsics/IRCam1Visible.npz")
+    npfile = np.load("cameraIntrinsics/Cam1Vis.npz")
     mtx1 = npfile["mtx"]
     dist1 = npfile["dist"]
-    npfile = np.load("cameraIntrinsics/IRCam2Visible.npz")
+    npfile = np.load("cameraIntrinsics/Cam2Vis.npz")
     mtx2 = npfile["mtx"]
     dist2 = npfile["dist"]
     npfile = np.load("src/relativePose.npy")
@@ -59,10 +59,10 @@ def main():
     xy_to_uv_mat = tri.getProjectorPositionStream(cap1, cap2)
     pose1 = tri.cam1.pose.copy()
     pose2 = tri.cam2.pose.copy()
-    npfile = np.load("cameraIntrinsics/IRCam1.npz")
+    npfile = np.load("cameraIntrinsics/Cam1IR.npz")
     mtx1 = npfile["mtx"]
     dist1 = npfile["dist"]
-    npfile = np.load("cameraIntrinsics/IRCam2.npz")
+    npfile = np.load("cameraIntrinsics/Cam2IR.npz")
     mtx2 = npfile["mtx"]
     dist2 = npfile["dist"]
     # check if in the orientation the camera order was flipped
