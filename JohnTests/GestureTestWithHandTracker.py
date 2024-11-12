@@ -1,20 +1,24 @@
 from threading import Thread
 import cv2
+import numpy as np
 import time
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
 import mediapipe as mp
+import Gesture
 
 
 def draw_landmarks_on_image(annotated_image, detection_result):
     hand_landmarks_list = detection_result.hand_landmarks
-    
+    Gesture_recog = Gesture.Gesture(720,360)
 
     # Loop through the detected hands to visualize.
     for idx in range(len(hand_landmarks_list)):
         hand_landmarks = hand_landmarks_list[idx]
+        
+        hand_sign_id = Gesture_recog.getGesture(hand_landmarks)
 
         # Draw the hand landmarks.
         hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
@@ -28,8 +32,40 @@ def draw_landmarks_on_image(annotated_image, detection_result):
             solutions.hands.HAND_CONNECTIONS,
             solutions.drawing_styles.get_default_hand_landmarks_style(),
             solutions.drawing_styles.get_default_hand_connections_style())
+        
+    brect = calc_bounding_rect(annotated_image, hand_landmarks)
+    
+    annotated_image = draw_info_text(annotated_image, brect, hand_sign_id)
+        
     return annotated_image
 
+def calc_bounding_rect(image, landmarks):
+    image_width, image_height = image.shape[1], image.shape[0]
+
+    landmark_array = np.empty((0, 2), int)
+
+    for _, landmark in enumerate(landmarks):
+        landmark_x = min(int(landmark.x * image_width), image_width - 1)
+        landmark_y = min(int(landmark.y * image_height), image_height - 1)
+
+        landmark_point = [np.array((landmark_x, landmark_y))]
+
+        landmark_array = np.append(landmark_array, landmark_point, axis=0)
+
+    x, y, w, h = cv2.boundingRect(landmark_array)
+
+    return [x, y, x + w, y + h]
+
+def draw_info_text(image, brect, hand_sign_id):
+    cv2.rectangle(image, (brect[0], brect[1]), (brect[2], brect[1] - 22),
+                 (0, 0, 0), -1)
+
+    # info_text = %f{hand_sign_id}
+    # cv2.putText(image, info_text, (brect[0] + 5, brect[1] - 4),
+    #            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+    print(hand_sign_id)
+
+    return image
 
 class HandTracker:
     def __init__(self, stream: cv2.VideoCapture):
@@ -134,7 +170,6 @@ if __name__ == "__main__":
                     webcam.shutdown()
                     cv2.destroyAllWindows()
                     break
-                
     except KeyboardInterrupt:
         webcam.shutdown()
         cv2.destroyAllWindows()
