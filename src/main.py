@@ -62,7 +62,7 @@ def main():
     npfile = np.load("cameraIntrinsics/relativePoses.npz")
     tri.relativePoseVis = npfile["relativePoseVis"]
     tri.relativePoseIR = npfile["relativePoseIR"]
-    tri.cam1IRtoVisPose = npfile["cam1IRtoVisPose"]
+    tri.cam1VisToIRPose = npfile["cam1VisToIRPose"]
     tri.cam2.setVisPose(np.linalg.inv(tri.relativePoseVis))
     xy_to_uv_mat = tri.getProjectorPositionStream(cap1, cap2)
     # tri.getCameraPositionsStream(cap1, cap2, markerWidth)

@@ -8,7 +8,7 @@ cam1PoseVis = npfile2["cam1Pose"]
 cam2PoseVis = npfile2["cam2Pose"]
 relativePoseIR = np.matmul(np.linalg.inv(cam1PoseIR), cam2PoseIR)
 relativePoseVis = np.matmul(np.linalg.inv(cam1PoseVis), cam2PoseVis)
-cam1IRtoVisPose = np.matmul(np.linalg.inv(cam1PoseVis), cam1PoseIR)
+cam1VisToIRPose = np.matmul(np.linalg.inv(cam1PoseIR), cam1PoseVis)
 
 np.savez("cameraIntrinsics/relativePoses.npz", relativePoseIR=relativePoseIR,
-         relativePoseVis=relativePoseVis, cam1IRtoVisPose=cam1IRtoVisPose)
+         relativePoseVis=relativePoseVis, cam1VisToIRPose=cam1VisToIRPose)

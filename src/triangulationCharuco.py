@@ -44,7 +44,7 @@ class Triangulation:
         self.ArucoDetector = cv2.aruco.ArucoDetector(dictionary, parameters)
         self.cam1 = cam1
         self.cam2 = cam2
-        self.cam1IRtoVisPose = None
+        self.cam1VisToIRPose = None
         self.relativePoseIR = None
         self.relativePoseIR = None
         return
@@ -284,7 +284,7 @@ class Triangulation:
                 pose2 = np.matmul(np.linalg.inv(self.relativePoseVis), pose1)
                 self.cam1.setVisPose(pose1)
                 self.cam2.setVisPose(pose2)
-                self.cam1.setIRPose(np.matmul(self.cam1IRtoVisPose, pose1))
+                self.cam1.setIRPose(np.matmul(self.cam1VisToIRPose, pose1))
                 self.cam2.setIRPose(
                     np.matmul(self.relativePoseIR, self.cam1.irPose))
                 TL = self.get3dPoint(cam1Corners[10], cam2Corners[10], False)
