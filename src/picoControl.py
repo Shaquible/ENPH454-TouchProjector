@@ -6,8 +6,10 @@ class PicoControl:
         self.pico = picod.pico(com)
         self.relayPin = relayPin
         self.pico.reset()
-        self.pico.GPIO_open(self.relayPin)
+        self.pico.gpio_open(gpio=self.relayPin)
         #self.pico.GPIO_set_dir(out_GPIO=self.relayPin, out_LEVEL=0)
+        self.pico.gpio_set_output(gpio=self.relayPin, level=0)
+        self.pico.gpio_set_pulls(gpio=self.relayPin, pull=picod.PULL_DOWN)
         if not self.pico.connected:
             exit()
 
