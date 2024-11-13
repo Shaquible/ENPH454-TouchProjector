@@ -32,7 +32,6 @@ def ML_Process(captureNum: int, cropRegion, dataQueue: Queue, capSQ: Queue, capR
 def main():
 
     mp_hands = mp.solutions.hands
-    markerWidth = 0.1586
     cap1 = openStream(0, imHeight, imWidth, exposure=exposure)
     cap2 = openStream(1, imHeight, imWidth, exposure=exposure)
     npfile = np.load("cameraIntrinsics/Cam1Vis.npz")
@@ -41,7 +40,12 @@ def main():
     npfile = np.load("cameraIntrinsics/Cam2Vis.npz")
     mtx2 = npfile["mtx"]
     dist2 = npfile["dist"]
-    npfile = np.load("src/relativePose.npy")
+    npfile = np.load("cameraIntrinsics/Cam1IR.npz")
+    mtx1IR = npfile["mtx"]
+    dist1IR = npfile["dist"]
+    npfile = np.load("cameraIntrinsics/Cam2IR.npz")
+    mtx2IR = npfile["mtx"]
+    dist2IR = npfile["dist"]
     # need to crop the images
     while True:
         ret1, frame1 = cap1.read()
@@ -53,23 +57,14 @@ def main():
     crop2 = cv2.selectROI("cam1", frame2)
     cv2.destroyAllWindows()
 
-    tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
-    tri.relativePose = npfile
-    tri.cam2.setPose(np.linalg.inv(tri.relativePose))
+    tri = Triangulation(Camera(mtx1IR, dist1IR, mtx1, dist1),
+                        Camera(mtx2IR, dist2IR, mtx2, dist2))
+    npfile = np.load("cameraIntrinsics/relativePoses.npz")
+    tri.relativePoseVis = npfile["relativePoseVis"]
+    tri.relativePoseIR = npfile["relativePoseIR"]
+    tri.cam1IRtoVisPose = npfile["cam1IRtoVisPose"]
+    tri.cam2.setVisPose(np.linalg.inv(tri.relativePoseVis))
     xy_to_uv_mat = tri.getProjectorPositionStream(cap1, cap2)
-    pose1 = tri.cam1.pose.copy()
-    pose2 = tri.cam2.pose.copy()
-    npfile = np.load("cameraIntrinsics/Cam1IR.npz")
-    mtx1 = npfile["mtx"]
-    dist1 = npfile["dist"]
-    npfile = np.load("cameraIntrinsics/Cam2IR.npz")
-    mtx2 = npfile["mtx"]
-    dist2 = npfile["dist"]
-    # check if in the orientation the camera order was flipped
-    tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
-    tri.relativePose = npfile
-    tri.cam1.setPose(pose1)
-    tri.cam2.setPose(pose2)
     # tri.getCameraPositionsStream(cap1, cap2, markerWidth)
     print("Position Found")
     cap1.release()
