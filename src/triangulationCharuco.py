@@ -35,8 +35,6 @@ class Triangulation:
         parameters = cv2.aruco.DetectorParameters()
         parameters.minMarkerPerimeterRate = 0.1
         parameters.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-        parameters.useAruco3Detection = True
-        parameters.perspectiveRemoveIgnoredMarginPerCell = 0.13
         self.charucoBoardPaper = cv2.aruco.CharucoBoard(
             (4, 6), 0.045125, 0.022625, dictionary)
         self.charucoBoard = cv2.aruco.CharucoBoard(
@@ -63,6 +61,9 @@ class Triangulation:
             else:
                 gray1, g, r = cv2.split(frame1)
                 gray2, g, r = cv2.split(frame2)
+            cv2.imshow("cam1", gray1)
+            cv2.imshow("cam2", gray2)
+            cv2.waitKey(1)
             # gray1 = cv2.undistort(gray1, self.cam1.mtx, self.cam1.dist)
             (corners1, ids1, rejectedImgPoints1) = self.ArucoDetector.detectMarkers(gray1)
 
@@ -74,6 +75,7 @@ class Triangulation:
                                        gray1, gray2, IR)
 
                 if found:
+                    cv2.destroyAllWindows()
                     return True
 
     def getCameraPositionsImage(self, frame1: np.ndarray, frame2: np.ndarray, IR=True) -> bool:
@@ -104,15 +106,15 @@ class Triangulation:
             cam = self.cam1
         elif camNum == 2:
             cam = self.cam2
-        if IR:
+        if IR and cam is not None:
             mtx = cam.irMtx
             dist = cam.irDist
-        else:
+        elif cam is not None:
             mtx = cam.visMtx
             dist = cam.visDist
         if cam is not None:
             corners, ids, rejected, recorvered = cv2.aruco.refineDetectedMarkers(
-                im, board, corners, ids, rejectedCorners, cameraMatrix=mtx, distCoeffs=dist, errorCorrectionRate=3)
+                im, board, corners, ids, rejectedCorners, cameraMatrix=mtx, distCoeffs=dist, errorCorrectionRate=3.0)
             charuco_retval, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(
                 corners, ids, im, board, cameraMatrix=mtx, distCoeffs=dist)
         else:
@@ -284,9 +286,9 @@ class Triangulation:
                 pose2 = np.matmul(np.linalg.inv(self.relativePoseVis), pose1)
                 self.cam1.setVisPose(pose1)
                 self.cam2.setVisPose(pose2)
-                self.cam1.setIRPose(np.matmul(self.cam1VisToIRPose, pose1))
+                self.cam1.setIRPose(np.matmul(np.linalg.inv(self.cam1VisToIRPose), pose1))
                 self.cam2.setIRPose(
-                    np.matmul(self.relativePoseIR, self.cam1.irPose))
+                    np.matmul(np.linalg.inv(self.relativePoseIR), self.cam1.irPose))
                 TL = self.get3dPoint(cam1Corners[10], cam2Corners[10], False)
                 TR = self.get3dPoint(
                     cam1Corners[0], cam2Corners[0], False)
@@ -305,7 +307,6 @@ class Triangulation:
                 print(points1)
                 print(points2)
                 matrix = cv2.getPerspectiveTransform(points1, points2)
-                self.cam1.visPose = np.matmul(pose1)
                 # pico.setIRCutFilter(0)
                 cv2.destroyAllWindows()
                 return matrix

@@ -5,7 +5,7 @@ import numpy as np
 imHeight = 1080
 imWidth = 1920
 exposure = -8
-IR = True
+IR = False
 npfile = np.load("cameraIntrinsics/Cam1IR.npz")
 mtx1 = npfile["mtx"]
 dist1 = npfile["dist"]
@@ -32,8 +32,12 @@ tri = Triangulation(Camera(mtx1, dist1, mtx1Vis, dist1Vis),
                     Camera(mtx2, dist2, mtx2Vis, dist2Vis))
 tri.getCameraPositionsStream(cap1, cap2, IR)
 if IR:
+    print(tri.cam1.irPose)
+    print(tri.cam2.irPose)
     np.savez("cameraIntrinsics/IRPoses.npz",
              cam1Pose=tri.cam1.irPose, cam2Pose=tri.cam2.irPose)
 else:
+    print(tri.cam1.visPose)
+    print(tri.cam2.visPose)
     np.savez("cameraIntrinsics/VisPoses.npz",
              cam1Pose=tri.cam1.visPose, cam2Pose=tri.cam2.visPose)

@@ -8,8 +8,8 @@ class PicoControl:
         self.pico.reset()
         self.pico.gpio_open(gpio=self.relayPin)
         #self.pico.GPIO_set_dir(out_GPIO=self.relayPin, out_LEVEL=0)
-        self.pico.gpio_set_output(gpio=self.relayPin, level=0)
-        self.pico.gpio_set_pulls(gpio=self.relayPin, pull=picod.PULL_DOWN)
+        self.pico.gpio_set_output(self.relayPin, level=0)
+        self.pico.gpio_set_pull(self.relayPin, pull=picod.PULL_UP)
         if not self.pico.connected:
             exit()
 
@@ -20,9 +20,5 @@ class PicoControl:
 if __name__ == "__main__":
     pico = PicoControl("COM3", 0)
     pico.setIRCutFilter(1)
-    time.sleep(2)
-    pico.setIRCutFilter(0)
-    time.sleep(2)
-    pico.setIRCutFilter(1)
-    time.sleep(2)
+    time.sleep(10)
     pico.setIRCutFilter(0)

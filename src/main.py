@@ -120,7 +120,7 @@ def main():
                 dt = time.time() - t0
                 t0 = time.time()
 
-                # pos = positionFilter.smoothPos(pos)
+                pos = positionFilter.smoothPos(pos)
                 position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f}".format(
                     pos[0]*100, pos[1]*100, pos[2]*100, dt)
                 print(position, end="\r")
