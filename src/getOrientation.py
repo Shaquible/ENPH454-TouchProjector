@@ -27,17 +27,31 @@ while True:
     ret2, frame2 = cap2.read()
     if ret1 and ret2:
         break
-
+cap1Poses = []
+cap2Poses = []
 tri = Triangulation(Camera(mtx1, dist1, mtx1Vis, dist1Vis),
                     Camera(mtx2, dist2, mtx2Vis, dist2Vis))
-tri.getCameraPositionsStream(cap1, cap2, IR)
+for i in range(200):
+    tri.getCameraPositionsStream(cap1, cap2, IR)
+
+    if IR:
+        cap1Poses.append(tri.cam1.irPose)
+        cap2Poses.append(tri.cam2.irPose)
+        
+    else:
+        cap1Poses.append(tri.cam1.visPose)
+        cap2Poses.append(tri.cam2.visPose)
+
+cap1Poses = np.array(cap1Poses)
+cap2Poses = np.array(cap2Poses)
+pose1 = np.mean(cap1Poses, axis=0)
+pose2 = np.mean(cap2Poses, axis=0)
+print(pose1)
+print(pose2)
 if IR:
-    print(tri.cam1.irPose)
-    print(tri.cam2.irPose)
     np.savez("cameraIntrinsics/IRPoses.npz",
-             cam1Pose=tri.cam1.irPose, cam2Pose=tri.cam2.irPose)
+             cam1Pose=pose1, cam2Pose=pose2)
 else:
-    print(tri.cam1.visPose)
-    print(tri.cam2.visPose)
+    
     np.savez("cameraIntrinsics/VisPoses.npz",
-             cam1Pose=tri.cam1.visPose, cam2Pose=tri.cam2.visPose)
+             cam1Pose=pose1, cam2Pose=pose2)

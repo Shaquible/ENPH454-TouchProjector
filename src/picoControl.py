@@ -9,12 +9,12 @@ class PicoControl:
         self.pico.gpio_open(gpio=self.relayPin)
         #self.pico.GPIO_set_dir(out_GPIO=self.relayPin, out_LEVEL=0)
         self.pico.gpio_set_output(self.relayPin, level=0)
-        self.pico.gpio_set_pull(self.relayPin, pull=picod.PULL_UP)
+        self.pico.gpio_set_pull(self.relayPin, pull=picod.PULL_DOWN)
         if not self.pico.connected:
             exit()
 
     def setIRCutFilter(self, state):
-        self.pico.gpio_write(self.relayPin, state)
+        self.pico.gpio_write(self.relayPin, not state)
         return
     
 if __name__ == "__main__":

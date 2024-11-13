@@ -19,3 +19,6 @@ np.savez("cameraIntrinsics/relativePoses.npz", relativePoseIR=relativePoseIR,
 print(relativePoseIR)
 print(relativePoseVis)
 print(cam1VisToIRPose)
+print(np.linalg.norm(relativePoseIR[0:3, 3]))
+print(np.linalg.norm(relativePoseVis[0:3, 3]))
+print(np.linalg.norm(cam1VisToIRPose[0:3, 3]))

@@ -8,6 +8,7 @@ import time
 from mouseMove import mouseMove
 from handPositionFilter import deEmphasis
 import cv2
+from picoControl import PicoControl
 import pandas as pd
 imHeight = 1080
 imWidth = 1920
@@ -32,6 +33,9 @@ def ML_Process(captureNum: int, cropRegion, dataQueue: Queue, capSQ: Queue, capR
 def main():
 
     mp_hands = mp.solutions.hands
+    pico = PicoControl("COM3",0)
+    pico.setIRCutFilter(1)
+    time.sleep(1)
     cap1 = openStream(0, imHeight, imWidth, exposure=exposure)
     cap2 = openStream(1, imHeight, imWidth, exposure=exposure)
     npfile = np.load("cameraIntrinsics/Cam1Vis.npz")
@@ -46,6 +50,7 @@ def main():
     npfile = np.load("cameraIntrinsics/Cam2IR.npz")
     mtx2IR = npfile["mtx"]
     dist2IR = npfile["dist"]
+    
     # need to crop the images
     while True:
         ret1, frame1 = cap1.read()
@@ -70,6 +75,7 @@ def main():
     cap1.release()
     cap2.release()
     time.sleep(0.2)
+    pico.setIRCutFilter(0)
     positionFilter = deEmphasis()
     # launching the process to run tracking on each camera
     procs = []
@@ -86,7 +92,7 @@ def main():
     for proc in procs:
         proc.start()
     mouse = mouseMove(xy_to_uv_mat)
-    dataCollectLen = 500
+    dataCollectLen = 2000
     times = np.zeros(dataCollectLen)
     xs = np.zeros(dataCollectLen)
     ys = np.zeros(dataCollectLen)

@@ -61,9 +61,6 @@ class Triangulation:
             else:
                 gray1, g, r = cv2.split(frame1)
                 gray2, g, r = cv2.split(frame2)
-            cv2.imshow("cam1", gray1)
-            cv2.imshow("cam2", gray2)
-            cv2.waitKey(1)
             # gray1 = cv2.undistort(gray1, self.cam1.mtx, self.cam1.dist)
             (corners1, ids1, rejectedImgPoints1) = self.ArucoDetector.detectMarkers(gray1)
 
@@ -75,7 +72,6 @@ class Triangulation:
                                        gray1, gray2, IR)
 
                 if found:
-                    cv2.destroyAllWindows()
                     return True
 
     def getCameraPositionsImage(self, frame1: np.ndarray, frame2: np.ndarray, IR=True) -> bool:
@@ -198,8 +194,6 @@ class Triangulation:
         return (position[:3]/position[3])
 
     def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture):
-        # pico = PicoControl(0)
-        # pico.setIRCutFilter(1)
         # figure out coordinates of this and add white boarder
         imS = cv2.imread("src/ChArUco_Marker_Display.png")
         res = imS.shape
@@ -307,7 +301,6 @@ class Triangulation:
                 print(points1)
                 print(points2)
                 matrix = cv2.getPerspectiveTransform(points1, points2)
-                # pico.setIRCutFilter(0)
                 cv2.destroyAllWindows()
                 return matrix
 

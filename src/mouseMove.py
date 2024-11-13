@@ -4,7 +4,7 @@ import numpy as np
 
 
 class mouseMove:
-    def __init__(self, xy_to_uv_mat, zThresh=-0.05):
+    def __init__(self, xy_to_uv_mat, zThresh=-0.02):
         self.zThresh = zThresh
         self.tranform = xy_to_uv_mat
         self.lastState = False
@@ -27,11 +27,12 @@ class mouseMove:
             x = self.xRes
         if y > self.yRes:
             y = self.yRes
-        # if not self.lastState and z < self.zThresh:
-        #     pyautogui.mouseDown(button='left', _pause=False)
+        # if not self.lastState and z > self.zThresh:
+        #     pyautogui.mouseDown(x,y,button='left', _pause=False)
         #     self.lastState = True
-        # elif self.lastState and z > self.zThresh:
-        #     pyautogui.mouseUp(button='left', _pause=False)
+        # elif self.lastState and z < self.zThresh:
+        #     pyautogui.mouseUp(x,y,button='left', _pause=False)
         #     self.lastState = False
-        pyautogui.moveTo(x, y, _pause=False)
+        # else:
+        pyautogui.moveTo(x, y, duration=0.001, _pause=False)
         return
