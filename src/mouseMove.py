@@ -34,5 +34,5 @@ class mouseMove:
         #     pyautogui.mouseUp(x,y,button='left', _pause=False)
         #     self.lastState = False
         # else:
-        pyautogui.moveTo(x, y, duration=0.001, _pause=False)
+        pyautogui.moveTo(x, y, _pause=False)
         return
