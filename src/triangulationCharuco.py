@@ -38,7 +38,7 @@ class Triangulation:
         self.charucoBoardPaper = cv2.aruco.CharucoBoard(
             (4, 6), 0.045125, 0.022625, dictionary)
         self.charucoBoard = cv2.aruco.CharucoBoard(
-            (3, 7), 0.03, 0.02, dictionary)
+            (3, 7), 0.078, 0.052, dictionary)
         self.ArucoDetector = cv2.aruco.ArucoDetector(dictionary, parameters)
         self.cam1 = cam1
         self.cam2 = cam2
@@ -276,15 +276,17 @@ class Triangulation:
 
     def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture):
         nCorners = 12
-        screenShotCorners = np.zeros((nCorners, 2))
-        points = np.zeros((nCorners, 3))
-        for i in range(10):
-            screenShotCornersOut, newPoints, c1Corners, c2Corners = self.findCharucoCalibration(cap1, cap2, 10*i, 10*i)
-            screenShotCorners[nCorners*i:nCorners*(i+1)] = screenShotCornersOut
+        nRepeats = 10
+        screenShotCorners = np.zeros((nCorners*nRepeats, 2))
+        points = np.zeros((nCorners*nRepeats, 3))
+        for i in range(nRepeats):
+            screenShotCorners, newPoints, c1Corners, c2Corners = self.findCharucoCalibration(cap1, cap2, 10*i, 10*i)
             points[nCorners*i:nCorners*(i+1)] = newPoints
             if i ==0:
                 cam1Corners = c1Corners
                 cam2Corners = c2Corners
+                screenShotCornersOut = screenShotCorners
+        print(points)
         xhat, yhat, zhat, offSet = getPlaneVectors(points)
         pose1 = getTransformationMatrix(xhat, yhat, zhat, offSet)
         pose2 = np.matmul(np.linalg.inv(self.relativePoseVis), pose1)

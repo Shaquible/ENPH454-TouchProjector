@@ -38,6 +38,7 @@ def main():
     time.sleep(1)
     cap1 = openStream(0, imHeight, imWidth, exposure=exposure)
     cap2 = openStream(1, imHeight, imWidth, exposure=exposure)
+    #loading intrinsics and poses
     npfile = np.load("cameraIntrinsics/Cam1Vis.npz")
     mtx1 = npfile["mtx"]
     dist1 = npfile["dist"]
@@ -99,6 +100,7 @@ def main():
     zs = np.zeros(dataCollectLen)
     i = 0
     t0 = time.time()
+    #main loop
     try:
         while True:
             cam1Hands = q1.get()
