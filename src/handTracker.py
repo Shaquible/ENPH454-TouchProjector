@@ -89,7 +89,8 @@ class HandTracker:
                         frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
                 self.processedFrame = frame
             self.hand_landmarks = results.multi_hand_landmarks
-
+        else:
+            return None
     def handThread(self, dataQueue: Queue, sendQueue: Queue, receiveQueue: Queue):
         while True:
             if self.stopTrack:
