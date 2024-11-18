@@ -10,6 +10,7 @@ import mediapipe as mp
 
 def draw_landmarks_on_image(annotated_image, detection_result):
     hand_landmarks_list = detection_result.hand_landmarks
+    
 
     # Loop through the detected hands to visualize.
     for idx in range(len(hand_landmarks_list)):
@@ -20,6 +21,7 @@ def draw_landmarks_on_image(annotated_image, detection_result):
         hand_landmarks_proto.landmark.extend([
             landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks
         ])
+        
         solutions.drawing_utils.draw_landmarks(
             annotated_image,
             hand_landmarks_proto,
@@ -132,6 +134,7 @@ if __name__ == "__main__":
                     webcam.shutdown()
                     cv2.destroyAllWindows()
                     break
+                
     except KeyboardInterrupt:
         webcam.shutdown()
         cv2.destroyAllWindows()

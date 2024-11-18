@@ -1,6 +1,6 @@
 from handTracker import HandTracker
 from webcamStream import openStream
-from triangulation import Triangulation, Camera
+from triangulationCharuco import Triangulation, Camera
 import mediapipe as mp
 import numpy as np
 from multiprocessing import Process, Queue
@@ -8,6 +8,7 @@ import time
 from mouseMove import mouseMove
 from handPositionFilter import deEmphasis
 import cv2
+from picoControl import PicoControl
 import pandas as pd
 imHeight = 1080
 imWidth = 1920
@@ -32,15 +33,24 @@ def ML_Process(captureNum: int, cropRegion, dataQueue: Queue, capSQ: Queue, capR
 def main():
 
     mp_hands = mp.solutions.hands
-    markerWidth = 0.1586
-    npfile = np.load("cameraIntrinsics/IRCam1.npz")
-    mtx1 = npfile["mtx"]
-    dist1 = npfile["dist"]
-    npfile = np.load("cameraIntrinsics/IRCam2.npz")
-    mtx2 = npfile["mtx"]
-    dist2 = npfile["dist"]
+    pico = PicoControl("COM3",0)
+    pico.setIRCutFilter(1)
+    time.sleep(1)
     cap1 = openStream(0, imHeight, imWidth, exposure=exposure)
     cap2 = openStream(1, imHeight, imWidth, exposure=exposure)
+    npfile = np.load("cameraIntrinsics/Cam1Vis.npz")
+    mtx1 = npfile["mtx"]
+    dist1 = npfile["dist"]
+    npfile = np.load("cameraIntrinsics/Cam2Vis.npz")
+    mtx2 = npfile["mtx"]
+    dist2 = npfile["dist"]
+    npfile = np.load("cameraIntrinsics/Cam1IR.npz")
+    mtx1IR = npfile["mtx"]
+    dist1IR = npfile["dist"]
+    npfile = np.load("cameraIntrinsics/Cam2IR.npz")
+    mtx2IR = npfile["mtx"]
+    dist2IR = npfile["dist"]
+    
     # need to crop the images
     while True:
         ret1, frame1 = cap1.read()
@@ -51,14 +61,21 @@ def main():
     cv2.destroyAllWindows()
     crop2 = cv2.selectROI("cam1", frame2)
     cv2.destroyAllWindows()
-    print(crop1, crop2)
 
-    tri = Triangulation(Camera(mtx1, dist1), Camera(mtx2, dist2))
-    tri.getCameraPositionsStream(cap1, cap2, markerWidth)
+    tri = Triangulation(Camera(mtx1IR, dist1IR, mtx1, dist1),
+                        Camera(mtx2IR, dist2IR, mtx2, dist2))
+    npfile = np.load("cameraIntrinsics/relativePoses.npz")
+    tri.relativePoseVis = npfile["relativePoseVis"]
+    tri.relativePoseIR = npfile["relativePoseIR"]
+    tri.cam1VisToIRPose = npfile["cam1VisToIRPose"]
+    tri.cam2.setVisPose(np.linalg.inv(tri.relativePoseVis))
+    xy_to_uv_mat = tri.getProjectorPositionStream(cap1, cap2)
+    # tri.getCameraPositionsStream(cap1, cap2, markerWidth)
     print("Position Found")
     cap1.release()
     cap2.release()
     time.sleep(0.2)
+    pico.setIRCutFilter(0)
     positionFilter = deEmphasis()
     # launching the process to run tracking on each camera
     procs = []
@@ -74,8 +91,8 @@ def main():
         1, crop2, q2, capQ2, capQ1, processQ2, processQ1)))
     for proc in procs:
         proc.start()
-    mouse = mouseMove()
-    dataCollectLen = 500
+    mouse = mouseMove(xy_to_uv_mat)
+    dataCollectLen = 2000
     times = np.zeros(dataCollectLen)
     xs = np.zeros(dataCollectLen)
     ys = np.zeros(dataCollectLen)
