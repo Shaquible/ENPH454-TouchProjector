@@ -192,18 +192,17 @@ class Triangulation:
                 self.cam1.visProjection, self.cam2.visProjection, undistort1, undistort2)
         position = position.reshape(4)
         return (position[:3]/position[3])
-
-    def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture):
+    
+    def findCharucoCalibration(self, cap1, cap2, offsetx, offsety):
         # figure out coordinates of this and add white boarder
         imS = cv2.imread("src/ChArUco_Marker_Display.png")
         res = imS.shape
-        print(res)
         imS = cv2.resize(imS, (int(res[1]/1.2), int(res[0]/1.2)))
         cv2.imshow("Aruco", imS)
         # move window to top left
-        cv2.moveWindow("Aruco", 0, 0)
+        cv2.moveWindow("Aruco", offsetx, offsety)
         cv2.waitKey(1)
-        time.sleep(2)
+        time.sleep(1)
         screenShot = np.array(ImageGrab.grab())
         screenShot = cv2.cvtColor(screenShot, cv2.COLOR_BGR2GRAY)
         cv2.imwrite("screenShot.png", screenShot)
@@ -268,41 +267,49 @@ class Triangulation:
                 idOrder = np.argsort(ids2)
                 for i, id in enumerate(idOrder):
                     cam2Corners[i] = corners2[id][0]
-                # figure out which cam is which
-                cv2.imwrite("cam1.png", gray1)
-                cv2.imwrite("cam2.png", gray2)
                 points = np.zeros((nCorners, 3))
                 for i in range(nCorners):
                     points[i] = self.get3dPoint(
                         cam1Corners[i], cam2Corners[i], False)
-                xhat, yhat, zhat, offSet = getPlaneVectors(points)
-                pose1 = getTransformationMatrix(xhat, yhat, zhat, offSet)
-                pose2 = np.matmul(np.linalg.inv(self.relativePoseVis), pose1)
-                self.cam1.setVisPose(pose1)
-                self.cam2.setVisPose(pose2)
-                self.cam1.setIRPose(np.matmul(np.linalg.inv(self.cam1VisToIRPose), pose1))
-                self.cam2.setIRPose(
-                    np.matmul(np.linalg.inv(self.relativePoseIR), self.cam1.irPose))
-                TL = self.get3dPoint(cam1Corners[10], cam2Corners[10], False)
-                TR = self.get3dPoint(
-                    cam1Corners[0], cam2Corners[0], False)
-                BL = self.get3dPoint(cam1Corners[11], cam2Corners[11], False)
-                BR = self.get3dPoint(
-                    cam1Corners[1], cam2Corners[1], False)
-                print(TL, TR, BL, BR)
-                screenTL = screenShotCornersOut[10]
-                screenTR = screenShotCornersOut[0]
-                screenBL = screenShotCornersOut[11]
-                screenBR = screenShotCornersOut[1]
-                points1 = np.array(
-                    [TL[:2], TR[:2], BL[:2], BR[:2]], dtype='float32')
-                points2 = np.array(
-                    [screenTL, screenTR, screenBL, screenBR], dtype='float32')
-                print(points1)
-                print(points2)
-                matrix = cv2.getPerspectiveTransform(points1, points2)
                 cv2.destroyAllWindows()
-                return matrix
+                return screenShotCornersOut, points, cam1Corners, cam2Corners
+
+    def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture):
+        nCorners = 12
+        screenShotCorners = np.zeros((nCorners, 2))
+        points = np.zeros((nCorners, 3))
+        for i in range(10):
+            screenShotCornersOut, newPoints, c1Corners, c2Corners = self.findCharucoCalibration(cap1, cap2, 10*i, 10*i)
+            screenShotCorners[nCorners*i:nCorners*(i+1)] = screenShotCornersOut
+            points[nCorners*i:nCorners*(i+1)] = newPoints
+            if i ==0:
+                cam1Corners = c1Corners
+                cam2Corners = c2Corners
+        xhat, yhat, zhat, offSet = getPlaneVectors(points)
+        pose1 = getTransformationMatrix(xhat, yhat, zhat, offSet)
+        pose2 = np.matmul(np.linalg.inv(self.relativePoseVis), pose1)
+        self.cam1.setVisPose(pose1)
+        self.cam2.setVisPose(pose2)
+        self.cam1.setIRPose(np.matmul(np.linalg.inv(self.cam1VisToIRPose), pose1))
+        self.cam2.setIRPose(
+            np.matmul(np.linalg.inv(self.relativePoseIR), self.cam1.irPose))
+        TL = self.get3dPoint(cam1Corners[10], cam2Corners[10], False)
+        TR = self.get3dPoint(
+            cam1Corners[0], cam2Corners[0], False)
+        BL = self.get3dPoint(cam1Corners[11], cam2Corners[11], False)
+        BR = self.get3dPoint(
+            cam1Corners[1], cam2Corners[1], False)
+        print(TL, TR, BL, BR)
+        screenTL = screenShotCornersOut[10]
+        screenTR = screenShotCornersOut[0]
+        screenBL = screenShotCornersOut[11]
+        screenBR = screenShotCornersOut[1]
+        points1 = np.array(
+            [TL[:2], TR[:2], BL[:2], BR[:2]], dtype='float32')
+        points2 = np.array(
+            [screenTL, screenTR, screenBL, screenBR], dtype='float32')
+        matrix = cv2.getPerspectiveTransform(points1, points2)
+        return matrix
 
 
 def getTransformationMatrix(x, y, z, offset):
