@@ -192,7 +192,7 @@ class Triangulation:
                 self.cam1.visProjection, self.cam2.visProjection, undistort1, undistort2)
         position = position.reshape(4)
         return (position[:3]/position[3])
-    
+
     def findCharucoCalibration(self, cap1, cap2, offsetx, offsety):
         # figure out coordinates of this and add white boarder
         imS = cv2.imread("src/ChArUco_Marker_Display.png")
@@ -214,7 +214,6 @@ class Triangulation:
             screenShotCorners, idsScreenShot, rejectedImgPoints, screenShot, None)
         idsScreenShot = idsScreenShot.flatten()
         idOrder = np.argsort(idsScreenShot)
-        print(idOrder.shape)
         nCorners = 12
         screenShotCornersOut = np.zeros((nCorners, 2))
         for i, id in enumerate(idOrder):
@@ -223,6 +222,10 @@ class Triangulation:
         # find the marker in the screen shot to get pixel coordinates
         cam1Done = False
         cam2Done = False
+        prevIds1 = ()
+        prevCorner1 = ()
+        prevIds2 = ()
+        prevCorner2 = ()
         while True:
             # read in images
             if not cam1Done:
@@ -241,15 +244,27 @@ class Triangulation:
                  rejectedImgPoints1) = self.ArucoDetector.detectMarkers(gray1)
                 if markerIds1 is None:
                     continue
+                for i in range(len(prevIds1)):
+                    if prevIds1[i] not in markerIds1.flatten():
+                        markerCorners1 = markerCorners1 + prevCorner1[i]
+                        markerIds1 = markerIds1 + prevIds1[i]
                 corners1, ids1 = self.getCharucoCorner(
                     markerCorners1, markerIds1, rejectedImgPoints1, gray1, self.cam1)
+                prevIds1 = markerIds1
+                prevCorner1 = markerCorners1
             if not cam2Done:
                 (markerCorners2, markerIds2,
                  rejectedImgPoints2) = self.ArucoDetector.detectMarkers(gray2)
                 if markerIds2 is None:
                     continue
+                for i in range(len(prevIds2)):
+                    if prevIds2[i] not in markerIds2:
+                        markerCorners2 = markerCorners2 + prevCorner2[i]
+                        markerIds2 = markerIds2 + prevIds2[i]
                 corners2, ids2 = self.getCharucoCorner(
                     markerCorners2, markerIds2, rejectedImgPoints2, gray2, self.cam2)
+                prevIds2 = markerIds2
+                prevCorner2 = markerCorners2
             if ids1 is not None and ids2 is not None:
                 if len(ids1) == nCorners:
                     cam1Done = True
@@ -280,9 +295,10 @@ class Triangulation:
         screenShotCorners = np.zeros((nCorners*nRepeats, 2))
         points = np.zeros((nCorners*nRepeats, 3))
         for i in range(nRepeats):
-            screenShotCorners, newPoints, c1Corners, c2Corners = self.findCharucoCalibration(cap1, cap2, 10*i, 10*i)
+            screenShotCorners, newPoints, c1Corners, c2Corners = self.findCharucoCalibration(
+                cap1, cap2, 10*i, 10*i)
             points[nCorners*i:nCorners*(i+1)] = newPoints
-            if i ==0:
+            if i == 0:
                 cam1Corners = c1Corners
                 cam2Corners = c2Corners
                 screenShotCornersOut = screenShotCorners
@@ -292,7 +308,8 @@ class Triangulation:
         pose2 = np.matmul(np.linalg.inv(self.relativePoseVis), pose1)
         self.cam1.setVisPose(pose1)
         self.cam2.setVisPose(pose2)
-        self.cam1.setIRPose(np.matmul(np.linalg.inv(self.cam1VisToIRPose), pose1))
+        self.cam1.setIRPose(
+            np.matmul(np.linalg.inv(self.cam1VisToIRPose), pose1))
         self.cam2.setIRPose(
             np.matmul(np.linalg.inv(self.relativePoseIR), self.cam1.irPose))
         TL = self.get3dPoint(cam1Corners[10], cam2Corners[10], False)
