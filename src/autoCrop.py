@@ -41,4 +41,4 @@ def crop(xy_uv, cam1, cam2, Overshoot):
     width_uC2 = max(pointsCam2[:, 0]) - u1C2
     width_vC2 = max(pointsCam2[:, 1]) - v1C2
 
-    return [(u1C1, v1C1), (width_uC1, width_vC1)], [(u1C2, v1C2), (width_uC2, width_vC2)]
+    return [u1C1, v1C1, width_uC1, width_vC1], [u1C2, v1C2, width_uC2, width_vC2]
