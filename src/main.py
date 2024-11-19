@@ -10,6 +10,9 @@ from handPositionFilter import deEmphasis
 import cv2
 from picoControl import PicoControl
 import pandas as pd
+import Gesture
+import autoCrop
+
 imHeight = 1080
 imWidth = 1920
 exposure = -8
@@ -33,11 +36,12 @@ def ML_Process(captureNum: int, cropRegion, dataQueue: Queue, capSQ: Queue, capR
 def main():
 
     mp_hands = mp.solutions.hands
-    pico = PicoControl("COM3",0)
+    pico = PicoControl("COM3", 0)
     pico.setIRCutFilter(1)
     time.sleep(1)
     cap1 = openStream(0, imHeight, imWidth, exposure=exposure)
     cap2 = openStream(1, imHeight, imWidth, exposure=exposure)
+    # loading intrinsics and poses
     npfile = np.load("cameraIntrinsics/Cam1Vis.npz")
     mtx1 = npfile["mtx"]
     dist1 = npfile["dist"]
@@ -50,7 +54,7 @@ def main():
     npfile = np.load("cameraIntrinsics/Cam2IR.npz")
     mtx2IR = npfile["mtx"]
     dist2IR = npfile["dist"]
-    
+
     # need to crop the images
     while True:
         ret1, frame1 = cap1.read()
@@ -69,7 +73,11 @@ def main():
     tri.relativePoseIR = npfile["relativePoseIR"]
     tri.cam1VisToIRPose = npfile["cam1VisToIRPose"]
     tri.cam2.setVisPose(np.linalg.inv(tri.relativePoseVis))
+
+    # converts real space to pixel space in the projector
     xy_to_uv_mat = tri.getProjectorPositionStream(cap1, cap2)
+    # Crops the image to the area around the projector screen in each camera stream.
+    crop1, crop2 = autoCrop.crop(xy_to_uv_mat, tri.cam1, tri.cam2, 0.1)
     # tri.getCameraPositionsStream(cap1, cap2, markerWidth)
     print("Position Found")
     cap1.release()
@@ -92,6 +100,8 @@ def main():
     for proc in procs:
         proc.start()
     mouse = mouseMove(xy_to_uv_mat)
+    # initializes the gesture recognition class that can quickly fetch gestures from images.
+    gesture = Gesture.Gesture(imWidth, imHeight)
     dataCollectLen = 2000
     times = np.zeros(dataCollectLen)
     xs = np.zeros(dataCollectLen)
@@ -99,6 +109,7 @@ def main():
     zs = np.zeros(dataCollectLen)
     i = 0
     t0 = time.time()
+    # main loop
     try:
         while True:
             cam1Hands = q1.get()
@@ -107,9 +118,12 @@ def main():
                 for hand in cam1Hands:
                     cam1Coords = np.array([(hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x)*crop1[2] + crop1[0],
                                            (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop1[3] + crop1[1]])
+
                 for hand in cam2Hands:
                     cam2Coords = np.array([(hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x)*crop2[2] + crop2[0],
                                            (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop2[3] + crop2[1]])
+                hand_sign_id = gesture.getGesture(hand)
+
                 pos = tri.get3dPoint(cam1Coords, cam2Coords)
                 # if i < dataCollectLen:
                 #     times[i] = time.time()
@@ -127,8 +141,8 @@ def main():
                 t0 = time.time()
 
                 pos = positionFilter.smoothPos(pos)
-                position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f}".format(
-                    pos[0]*100, pos[1]*100, pos[2]*100, dt)
+                position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f} ID{}".format(
+                    pos[0]*100, pos[1]*100, pos[2]*100, dt, hand_sign_id)
                 print(position, end="\r")
                 mouse.moveMouse(pos)
 
