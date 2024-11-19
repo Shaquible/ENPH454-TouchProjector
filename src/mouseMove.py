@@ -31,13 +31,14 @@ class mouseMove:
             y = self.yRes
         click = self.debounceZ.debounce(z > self.zThresh)
         if not self.lastState and click:
-            pyautogui.mouseDown(x,y,button='left', duration=0.001, _pause=False)
+            pyautogui.mouseDown(x,y,button='left', duration=0.0001, _pause=False)
             self.lastState = True
         elif self.lastState and not click:
-            pyautogui.mouseUp(x,y,button='left', duration=0.001, _pause=False)
+            pyautogui.mouseUp(button='left', duration=0.0001, _pause=False)
+            pyautogui.moveTo(x, y, duration=0.0001 , _pause=False)
             self.lastState = False
         else:
-            pyautogui.moveTo(x, y, duration=0.001 , _pause=False)
+            pyautogui.moveTo(x, y, duration=0.0001 , _pause=False)
         return
     
     # def unclick(self):
