@@ -21,10 +21,10 @@ def crop(xy_uv, cam1: Camera, cam2: Camera, Overshoot: float) ->tuple[list[int],
     Mag1 = np.sqrt(xMax**2+yMax**2)*(1+Overshoot)
     Mag2 = np.sqrt((xMax*Overshoot)**2+(yMax*(1+Overshoot)**2))
     
-    points = [(-1, 0, xMax*Overshoot), 
-              (1, 0, xMax*(1+Overshoot)), 
-              (xMax*(1+Overshoot)/Mag1, yMax*(1+Overshoot)/Mag1, Mag1),
-              (-xMax*Overshoot/Mag2, yMax*(1+Overshoot)/Mag2, Mag2)]
+    points = np.array([(-xMax*Overshoot, 0, 1), 
+              (xMax*(1+Overshoot), 0, 1), 
+              (xMax*(1+Overshoot), yMax*(1+Overshoot), 1),
+              (-xMax*Overshoot, yMax*(1+Overshoot), 1)])
     pointsXYW = np.zeros((4, 3))
     pointsXYZW = np.zeros((4, 4))
     pointsCam1 = np.zeros((4, 3))
@@ -69,6 +69,8 @@ if __name__ == "__main__":
     tri = Triangulation(Camera(mtx1IR, dist1IR, mtx1, dist1),
                         Camera(mtx2IR, dist2IR, mtx2, dist2))
     
-    xy_to_uv_mat = np.identity(3)
+    xy_to_uv_mat = [[ 6.47527889e+03,  2.10521119e+02,  6.10772855e+02],
+ [ 1.57601980e+01,  6.10275228e+03,  6.16671078e+02],
+ [-5.64507939e-04,  1.12740223e-01,  1.00000000e+00]]
     
     print(crop(xy_to_uv_mat, tri.cam1, tri.cam2, 0.1))
