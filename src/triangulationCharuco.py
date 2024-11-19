@@ -246,8 +246,8 @@ class Triangulation:
                     continue
                 for i in range(len(prevIds1)):
                     if prevIds1[i] not in markerIds1.flatten():
-                        markerCorners1 = markerCorners1 + prevCorner1[i]
-                        markerIds1 = markerIds1 + prevIds1[i]
+                        markerCorners1 = (*markerCorners1, prevCorner1[i])
+                        markerIds1 = np.append(markerIds1, prevIds1[i])
                 corners1, ids1 = self.getCharucoCorner(
                     markerCorners1, markerIds1, rejectedImgPoints1, gray1, self.cam1)
                 prevIds1 = markerIds1
@@ -258,19 +258,19 @@ class Triangulation:
                 if markerIds2 is None:
                     continue
                 for i in range(len(prevIds2)):
-                    if prevIds2[i] not in markerIds2:
-                        markerCorners2 = markerCorners2 + prevCorner2[i]
-                        markerIds2 = markerIds2 + prevIds2[i]
+                    if prevIds2[i] not in markerIds2.flatten():
+                        markerCorners2 = (*markerCorners2, prevCorner2[i])
+                        markerIds2 = np.append(markerIds2, prevIds2[i])
                 corners2, ids2 = self.getCharucoCorner(
                     markerCorners2, markerIds2, rejectedImgPoints2, gray2, self.cam2)
                 prevIds2 = markerIds2
                 prevCorner2 = markerCorners2
             if ids1 is not None and ids2 is not None:
+                print(len(ids1), len(ids2))
                 if len(ids1) == nCorners:
                     cam1Done = True
                 if len(ids2) == nCorners:
                     cam2Done = True
-                print(len(ids1), len(ids2))
             if ids1 is not None and ids2 is not None and len(ids1) == nCorners and len(ids2) == nCorners:
                 ids1 = ids1.flatten()
                 ids2 = ids2.flatten()

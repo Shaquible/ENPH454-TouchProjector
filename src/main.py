@@ -77,7 +77,8 @@ def main():
     # converts real space to pixel space in the projector
     xy_to_uv_mat = tri.getProjectorPositionStream(cap1, cap2)
     # Crops the image to the area around the projector screen in each camera stream.
-    crop1, crop2 = autoCrop.crop(xy_to_uv_mat, tri.cam1, tri.cam2, 0.1)
+    print(xy_to_uv_mat)
+    #crop1, crop2 = autoCrop.crop(xy_to_uv_mat, tri.cam1, tri.cam2, 0.1)
     # tri.getCameraPositionsStream(cap1, cap2, markerWidth)
     print("Position Found")
     cap1.release()
