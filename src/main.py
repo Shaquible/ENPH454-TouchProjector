@@ -123,7 +123,8 @@ def main():
                 for hand in cam2Hands:
                     cam2Coords = np.array([(hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x)*crop2[2] + crop2[0],
                                            (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop2[3] + crop2[1]])
-                hand_sign_id = gesture.getGesture(hand)
+                hand_sign_id = gesture.getGesture(hand.landmark)
+                #Shand_sign_id = 0
 
                 pos = tri.get3dPoint(cam1Coords, cam2Coords)
                 # if i < dataCollectLen:
@@ -142,10 +143,14 @@ def main():
                 t0 = time.time()
 
                 pos = positionFilter.smoothPos(pos)
-                position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f} ID{}".format(
+                position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f} ID {}         ".format(
                     pos[0]*100, pos[1]*100, pos[2]*100, dt, hand_sign_id)
                 print(position, end="\r")
                 mouse.moveMouse(pos)
+            # else:
+            #     mouse.debounceZ.buffer= np.zeros(mouse.debounceZ.N, dtype = bool)
+            #     mouse.lastState = False
+            #     mouse.unclick()
 
                 # print(pos, end="\r")
 
