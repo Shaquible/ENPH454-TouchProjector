@@ -3,7 +3,7 @@ import numpy as np
 from screeninfo import get_monitors
 from triangulationCharuco import Camera, Triangulation
 
-def crop(xy_uv, cam1: Camera, cam2: Camera, Overshoot: float) ->tuple[list[int], list[int]]:
+def crop(xy_uv, cam1: Camera, cam2: Camera, xOvershoot: float, yOvershoot) ->tuple[list[int], list[int]]:
 #def crop(xy_uv, cam1, cam2, Overshoot: float) ->tuple[list[int], list[int]]:
     # Pass the real space to projector space matrix and the two camera objects. Also pass the desired overshoot percentage
 
@@ -11,23 +11,18 @@ def crop(xy_uv, cam1: Camera, cam2: Camera, Overshoot: float) ->tuple[list[int],
     for m in get_monitors():
         xMax = m.width
         yMax = m.height
-    xMax = 3840
-    yMax = 2160
+    # xMax = 3840
+    # yMax = 2160
     # matrix for the world coordinates (x,y,z) given the uv values of the screen. Z is appended on as zero.
     A = np.linalg.inv(xy_uv)
     #.irProjection if from a camera object
     mat1 = cam1.irProjection
     mat2 = cam2.irProjection
 
-    # defines the desired points that are an overshoot of the screen size
-    Mag1 = np.sqrt(xMax**2+yMax**2)*(1+Overshoot)
-    Mag2 = np.sqrt((xMax*Overshoot)**2+(yMax*(1+Overshoot)**2))
-    
-    points = np.array([(-xMax*Overshoot, 0, 1), 
-              (xMax*(1+Overshoot), 0, 1), 
-              (xMax*(1+Overshoot), yMax*(1+Overshoot), 1),
-              (-xMax*Overshoot, yMax*(1+Overshoot), 1)])
-    print(points)
+    points = np.array([(-xMax*xOvershoot, 0, 1), 
+              (xMax*(1+xOvershoot), 0, 1), 
+              (xMax*(1+xOvershoot), yMax*(1+yOvershoot), 1),
+              (-xMax*xOvershoot, yMax*(1+yOvershoot), 1)])
     pointsXYW = np.zeros((4, 3))
     pointsXYZW = np.zeros((4, 4))
     pointsCam1 = np.zeros((4, 3))
@@ -41,8 +36,6 @@ def crop(xy_uv, cam1: Camera, cam2: Camera, Overshoot: float) ->tuple[list[int],
         pointsCam1[i] = pointsCam1[i] / pointsCam1[i][2]
         pointsCam2[i] = np.matmul(mat2, pointsXYZW[i])
         pointsCam2[i] = pointsCam2[i] / pointsCam2[i][2]
-    print(pointsXYW)
-    print(pointsCam1)
     
 
     # Gets the corner point for camera 1

@@ -266,7 +266,6 @@ class Triangulation:
                 prevIds2 = markerIds2
                 prevCorner2 = markerCorners2
             if ids1 is not None and ids2 is not None:
-                print(len(ids1), len(ids2))
                 if len(ids1) == nCorners:
                     cam1Done = True
                 if len(ids2) == nCorners:
@@ -291,7 +290,7 @@ class Triangulation:
 
     def getProjectorPositionStream(self, cap1: cv2.VideoCapture, cap2: cv2.VideoCapture):
         nCorners = 12
-        nRepeats = 10
+        nRepeats = 20
         screenShotCorners = np.zeros((nCorners*nRepeats, 2))
         points = np.zeros((nCorners*nRepeats, 3))
         for i in range(nRepeats):
@@ -302,7 +301,6 @@ class Triangulation:
                 cam1Corners = c1Corners
                 cam2Corners = c2Corners
                 screenShotCornersOut = screenShotCorners
-        print(points)
         xhat, yhat, zhat, offSet = getPlaneVectors(points)
         pose1 = getTransformationMatrix(xhat, yhat, zhat, offSet)
         pose2 = np.matmul(np.linalg.inv(self.relativePoseVis), pose1)
@@ -346,14 +344,16 @@ def getPlaneVectors(points):
     ys = points[:, 1]
     zs = points[:, 2]
     result = opt.minimize(planeErr, [0, 0, 0], args=(
-        xs, ys, zs), method='Nelder-Mead', tol=1e-6)
+        xs, ys, zs), method='Nelder-Mead')
     mse = planeErr(result.x, xs, ys, zs)
     print(mse, np.sqrt(mse))
     a, b, c = result.x
     v1 = np.array([xs[10], ys[10], planeZ(xs[10], ys[10], a, b, c)])
     v2 = np.array([xs[0], ys[0], planeZ(xs[0], ys[0], a, b, c)])
+    v3 = np.array([xs[11], ys[11], planeZ(xs[11], ys[11], a, b, c)])
     xhat = v2 - v1
-    zhat = np.array([a, b, 1])
+    yhat = v3 - v1
+    zhat = np.cross(xhat, yhat)
     xhat = xhat/np.linalg.norm(xhat)
     zhat = zhat/np.linalg.norm(zhat)
     yhat = np.cross(zhat, xhat)

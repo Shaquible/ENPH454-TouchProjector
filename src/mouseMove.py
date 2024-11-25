@@ -11,7 +11,7 @@ class mouseMove:
         self.lastState = False
         pyautogui.FAILSAFE = False
         self.debounceZ = Debouncer(2, False)
-        self.gestDebounce = Debouncer(5, False)
+        self.gestDebounce = Debouncer(3, 2)
         self.prev_sign_id = 0
 
         for m in get_monitors():
@@ -44,14 +44,15 @@ class mouseMove:
             pyautogui.moveTo(x, y, duration=0.0001 , _pause=False)
             
         #Gesture Shortcut included into mousemove
-        if gestureToggle == 1:
+        if gestureToggle:
             hand_sign_id_db = self.gestDebounce.debounce(hand_sign_id)
             if hand_sign_id_db != self.prev_sign_id:
                 if hand_sign_id_db == 0:
-                    pyautogui.press("E")
-                elif hand_sign_id_db == 2:
-                    pyautogui.press("B")
-            self.prev_sign_id = hand_sign_id_db
+                    pyautogui.press("E", _pause=False)
+                    self.prev_sign_id = 0
+                else:
+                    pyautogui.press("B", _pause=False)
+                    self.prev_sign_id = 2
             
         return
     

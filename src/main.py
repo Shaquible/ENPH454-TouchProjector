@@ -61,11 +61,11 @@ def main():
         ret2, frame2 = cap2.read()
         if ret1 and ret2:
             break
-    crop1 = cv2.selectROI("cam0", frame1)
-    cv2.destroyAllWindows()
-    crop2 = cv2.selectROI("cam1", frame2)
-    cv2.destroyAllWindows()
-
+    # crop1 = cv2.selectROI("cam0", frame1)
+    # cv2.destroyAllWindows()
+    # crop2 = cv2.selectROI("cam1", frame2)
+    # cv2.destroyAllWindows()
+    # print(crop1, crop2)
     tri = Triangulation(Camera(mtx1IR, dist1IR, mtx1, dist1),
                         Camera(mtx2IR, dist2IR, mtx2, dist2))
     npfile = np.load("cameraIntrinsics/relativePoses.npz")
@@ -76,9 +76,11 @@ def main():
 
     # converts real space to pixel space in the projector
     xy_to_uv_mat = tri.getProjectorPositionStream(cap1, cap2)
+    np.savez("johnDebug.npz", xy_to_uv_mat=xy_to_uv_mat, cam1Pose = tri.cam1.irProjection, cam2Pose = tri.cam2.irProjection)
     # Crops the image to the area around the projector screen in each camera stream.
     print(xy_to_uv_mat)
-    #crop1, crop2 = autoCrop.crop(xy_to_uv_mat, tri.cam1, tri.cam2, 0.1)
+    crop1, crop2 = autoCrop.crop(xy_to_uv_mat, tri.cam1, tri.cam2, 0.1, 0.2)
+    print(crop1, crop2)
     # tri.getCameraPositionsStream(cap1, cap2, markerWidth)
     print("Position Found")
     cap1.release()
@@ -120,11 +122,12 @@ def main():
                     cam1Coords = np.array([(hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x)*crop1[2] + crop1[0],
                                            (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop1[3] + crop1[1]])
 
+                #hand_sign_id = gesture.getGesture(hand.landmark)
                 for hand in cam2Hands:
                     cam2Coords = np.array([(hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x)*crop2[2] + crop2[0],
                                            (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop2[3] + crop2[1]])
-                hand_sign_id = gesture.getGesture(hand.landmark)
-                #Shand_sign_id = 0
+                
+                hand_sign_id = 2
 
                 pos = tri.get3dPoint(cam1Coords, cam2Coords)
                 # if i < dataCollectLen:
@@ -146,7 +149,7 @@ def main():
                 position = "X: {:.2f} Y: {:.2f} Z: {:.2f} dt{:.3f} ID {}         ".format(
                     pos[0]*100, pos[1]*100, pos[2]*100, dt, hand_sign_id)
                 print(position, end="\r")
-                mouse.moveMouse(pos)
+                mouse.moveMouse(pos, hand_sign_id)
             # else:
             #     mouse.debounceZ.buffer= np.zeros(mouse.debounceZ.N, dtype = bool)
             #     mouse.lastState = False
