@@ -18,11 +18,12 @@ class Gesture:
     def __init__(self, image_width, image_height):
         self.image_width = image_width
         self.image_height = image_height
+        self.keypoint_classifier = KeyPointClassifier()
 
     def getGesture(self, hand_landmarks):
         
         #Import the classification of gestures from the trained models in KeyPointClassifier
-        keypoint_classifier = KeyPointClassifier()
+        
         
         hand_sign_id = 0
         
@@ -35,7 +36,7 @@ class Gesture:
                 landmark_list)
 
             # Hand sign classification (This is the part that is needed to recognize if the finger is out or)
-            hand_sign_id = keypoint_classifier(pre_processed_landmark_list)
+            hand_sign_id = self.keypoint_classifier(pre_processed_landmark_list)
             
             # Hand Sign ID is 2 for a pointed finger
                    
