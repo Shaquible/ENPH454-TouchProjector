@@ -3,17 +3,19 @@ import numpy as np
 from screeninfo import get_monitors
 from triangulationCharuco import Camera, Triangulation
 
-
 def crop(xy_uv, cam1: Camera, cam2: Camera, Overshoot: float) ->tuple[list[int], list[int]]:
+#def crop(xy_uv, cam1, cam2, Overshoot: float) ->tuple[list[int], list[int]]:
     # Pass the real space to projector space matrix and the two camera objects. Also pass the desired overshoot percentage
 
     # Finds the full pixel resolution
     for m in get_monitors():
         xMax = m.width
         yMax = m.height
-
+    xMax = 3840
+    yMax = 2160
     # matrix for the world coordinates (x,y,z) given the uv values of the screen. Z is appended on as zero.
     A = np.linalg.inv(xy_uv)
+    #.irProjection if from a camera object
     mat1 = cam1.irProjection
     mat2 = cam2.irProjection
 
@@ -25,6 +27,7 @@ def crop(xy_uv, cam1: Camera, cam2: Camera, Overshoot: float) ->tuple[list[int],
               (xMax*(1+Overshoot), 0, 1), 
               (xMax*(1+Overshoot), yMax*(1+Overshoot), 1),
               (-xMax*Overshoot, yMax*(1+Overshoot), 1)])
+    print(points)
     pointsXYW = np.zeros((4, 3))
     pointsXYZW = np.zeros((4, 4))
     pointsCam1 = np.zeros((4, 3))
@@ -32,9 +35,15 @@ def crop(xy_uv, cam1: Camera, cam2: Camera, Overshoot: float) ->tuple[list[int],
 
     for i in range(4):
         pointsXYW[i] = np.matmul(A, points[i])
+        pointsXYW[i] = pointsXYW[i]/pointsXYW[i][2]
         pointsXYZW[i] = [pointsXYW[i][0],pointsXYW[i][1], 0, pointsXYW[i][2]]
         pointsCam1[i] = np.matmul(mat1, pointsXYZW[i])
+        pointsCam1[i] = pointsCam1[i] / pointsCam1[i][2]
         pointsCam2[i] = np.matmul(mat2, pointsXYZW[i])
+        pointsCam2[i] = pointsCam2[i] / pointsCam2[i][2]
+    print(pointsXYW)
+    print(pointsCam1)
+    
 
     # Gets the corner point for camera 1
     u1C1 = int(min(pointsCam1[:, 0]))
@@ -69,8 +78,14 @@ if __name__ == "__main__":
     tri = Triangulation(Camera(mtx1IR, dist1IR, mtx1, dist1),
                         Camera(mtx2IR, dist2IR, mtx2, dist2))
     
-    xy_to_uv_mat = np.array([[ 6.47527889e+03,  2.10521119e+02,  6.10772855e+02],
- [ 1.57601980e+01,  6.10275228e+03,  6.16671078e+02],
- [-5.64507939e-04,  1.12740223e-01,  1.00000000e+00]])
+    npfile = np.load("src/johnDebug.npz")
+    print(npfile.files)
+    cam1 = npfile["cam1Pose"]
+    cam2 = npfile["cam2Pose"]
+    xy_to_uv_mat = npfile["xy_to_uv_mat"]
     
-    print(crop(xy_to_uv_mat, tri.cam1, tri.cam2, 0.1))
+    # xy_to_uv_mat = np.array([[ 6.47527889e+03,  2.10521119e+02,  6.10772855e+02],
+ #[ 1.57601980e+01,  6.10275228e+03,  6.16671078e+02],
+ #[-5.64507939e-04,  1.12740223e-01,  1.00000000e+00]])
+    
+    print(crop(xy_to_uv_mat, cam1, cam2, 0.1))
