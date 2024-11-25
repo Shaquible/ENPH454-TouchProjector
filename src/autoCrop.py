@@ -69,8 +69,8 @@ if __name__ == "__main__":
     tri = Triangulation(Camera(mtx1IR, dist1IR, mtx1, dist1),
                         Camera(mtx2IR, dist2IR, mtx2, dist2))
     
-    xy_to_uv_mat = [[ 6.47527889e+03,  2.10521119e+02,  6.10772855e+02],
+    xy_to_uv_mat = np.array([[ 6.47527889e+03,  2.10521119e+02,  6.10772855e+02],
  [ 1.57601980e+01,  6.10275228e+03,  6.16671078e+02],
- [-5.64507939e-04,  1.12740223e-01,  1.00000000e+00]]
+ [-5.64507939e-04,  1.12740223e-01,  1.00000000e+00]])
     
     print(crop(xy_to_uv_mat, tri.cam1, tri.cam2, 0.1))
