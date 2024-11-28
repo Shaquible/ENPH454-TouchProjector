@@ -25,12 +25,7 @@ if __name__ == "__main__":
     # convert to BNW
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    h, s, v = cv2.split(hsv)
-    H = np.ones((1080, 1920), dtype=np.uint8)*15
-    S = np.ones((1080, 1920), dtype=np.uint8)*150
-    frame = cv2.merge((H, S, v))
-    frame = cv2.cvtColor(frame, cv2.COLOR_HSV2BGR)
+   
     tracker = HandTracker()
     times = np.zeros(20)
     nPixels = np.zeros(20)
@@ -39,9 +34,17 @@ if __name__ == "__main__":
         minCol = 35*cropNum
         maxRow = 1080-20*cropNum
         maxCol = 1920-35*cropNum
+        H = np.ones((maxRow - minRow, maxCol - minCol), dtype=np.uint8)*15
+        S = np.ones((maxRow - minRow, maxCol - minCol), dtype=np.uint8)*150
         frameCropped = frame[minRow:maxRow, minCol:maxCol]
+        hsv = cv2.cvtColor(frameCropped, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(hsv)
+        frameCropped = cv2.merge((H, S, v))
+        frameCropped = cv2.cvtColor(frameCropped, cv2.COLOR_HSV2BGR)
+        
         startTime = time.perf_counter()
         for i in range(200):
+            
             results = tracker.detectHands(frameCropped)
         endTime = time.perf_counter()
         frameTime = (endTime-startTime)/200
