@@ -104,7 +104,7 @@ def main():
         proc.start()
     mouse = mouseMove(xy_to_uv_mat)
     # initializes the gesture recognition class that can quickly fetch gestures from images.
-    gesture = Gesture.Gesture(imWidth, imHeight)
+    #gesture = Gesture.Gesture(imWidth, imHeight)
     dataCollectLen = 2000
     times = np.zeros(dataCollectLen)
     xs = np.zeros(dataCollectLen)
@@ -114,6 +114,7 @@ def main():
     t0 = time.time()
     # main loop
     try:
+        hand_sign_id = 2
         while True:
             cam1Hands = q1.get()
             cam2Hands = q2.get()
@@ -127,7 +128,7 @@ def main():
                     cam2Coords = np.array([(hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x)*crop2[2] + crop2[0],
                                            (hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y)*crop2[3] + crop2[1]])
                 
-                hand_sign_id = 2
+                
 
                 pos = tri.get3dPoint(cam1Coords, cam2Coords)
                 # if i < dataCollectLen:

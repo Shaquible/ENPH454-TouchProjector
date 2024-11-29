@@ -28,7 +28,7 @@ class HandTracker:
                                     min_detection_confidence=0.5, min_tracking_confidence=0.3, model_complexity=1)
         self.processedFrame = self.frame
         self.hand_landmarks = None
-        self.drawDebug = True
+        self.drawDebug = False
         self.num = capNum
 
     def startCapture(self, sendQueue: Queue, receiveQueue: Queue):
@@ -59,13 +59,13 @@ class HandTracker:
             if self.stopCap:
                 return
 
-            prevTime = time.time()
+            prevTime = time.perf_counter()
             # otherwise, read the next frame from the stream
             (self.grabbed, frame) = self.stream.read()
             while not self.grabbed:
                 (self.grabbed, frame) = self.stream.read()
             self.frame = frame
-            sleepTime = frameDelta - (time.time() - prevTime) - 0.01
+            sleepTime = frameDelta - (time.perf_counter() - prevTime) - 0.01
             time.sleep(sleepTime*(sleepTime > 0))
 
     def detectHands(self):
@@ -95,7 +95,9 @@ class HandTracker:
             self.hand_landmarks = None
 
     def handThread(self, dataQueue: Queue, sendQueue: Queue, receiveQueue: Queue):
+        minTime = 1/self.fps
         while True:
+            startTime = time.perf_counter()
             if self.stopTrack:
                 return
             sendQueue.put(1)
@@ -107,8 +109,11 @@ class HandTracker:
                 except:
                     pass
             dataQueue.put(self.hand_landmarks)
-            cv2.imshow(str(self.num), self.processedFrame)
-            cv2.waitKey(1)
+            dT = time.perf_counter() - startTime
+            if dT < minTime:
+                time.sleep(minTime - dT)
+            # cv2.imshow(str(self.num), self.processedFrame)
+            # cv2.waitKey(1)
 
     def read(self):
         # return the frame most recently read
