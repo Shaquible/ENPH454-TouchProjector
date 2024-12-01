@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from picoControl import PicoControl
+from .picoControl import PicoControl
 from PIL import ImageGrab
 import time
 import scipy.optimize as opt
@@ -205,7 +205,7 @@ class Triangulation:
         time.sleep(1)
         screenShot = np.array(ImageGrab.grab())
         screenShot = cv2.cvtColor(screenShot, cv2.COLOR_BGR2GRAY)
-        cv2.imwrite("screenShot.png", screenShot)
+        # cv2.imwrite("screenShot.png", screenShot)
         # screenShot = cv2.imread("screenShot.png")
         # screenShot = cv2.imread("src/ChArUco_Marker.png")
         (screenShotCorners, idsScreenShot,
